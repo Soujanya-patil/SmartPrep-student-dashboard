@@ -10,7 +10,7 @@ import type { VideoRecommendation, AttentionCheck } from "@/lib/types"
 
 const API_BASE_URL = "http://localhost:8081/api"
 const USER_ID = 1
-const CHECK_INTERVAL = 1 * 60
+const CHECK_INTERVAL = 15 * 60
 
 export function Dashboard() {
   const [videos, setVideos] = useState<VideoRecommendation[]>([])
