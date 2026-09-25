@@ -1,5 +1,8 @@
 "use client"
 
+import { Play, Youtube } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { decodeHtml } from "@/lib/utils"
 import type { VideoRecommendation } from "@/lib/types"
 
 interface YouTubePlayerProps {
@@ -18,33 +21,58 @@ export function getYouTubeId(url: string | undefined | null): string | null {
 export function YouTubePlayer({ video, isPaused, muted = false }: YouTubePlayerProps) {
   const videoId = getYouTubeId(video?.youtubeUrl)
 
-  if (!videoId) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-black text-white">
-        <div className="text-center">
-          <div className="text-6xl mb-4">▶</div>
-          <p className="text-xl">Select a video to start</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex-1 flex items-center justify-center bg-black p-4">
-      <div className="w-full max-w-5xl aspect-video">
-        <iframe
-          // key forces a fresh iframe per video so autoplay fires on every switch
-          key={`${videoId}-${muted}`}
-          width="100%"
-          height="100%"
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${muted ? 1 : 0}&rel=0&playsinline=1`}
-          title={video?.videoTitle || "YouTube video"}
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          className={`rounded-lg w-full h-full ${isPaused ? "pointer-events-none opacity-50" : ""}`}
-        />
+    <div className="w-full">
+      {/* 16:9 frame is always reserved, so the layout never jumps when a video loads */}
+      <div className="relative w-full aspect-video overflow-hidden rounded-2xl bg-black border border-primary/30 shadow-2xl shadow-primary/20">
+        {videoId ? (
+          <iframe
+            // key forces a fresh iframe per video so autoplay fires on every switch
+            key={`${videoId}-${muted}`}
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${muted ? 1 : 0}&rel=0&playsinline=1`}
+            title={video ? decodeHtml(video.videoTitle) : "YouTube video"}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className={`absolute inset-0 h-full w-full border-0 transition-opacity ${isPaused ? "pointer-events-none opacity-50" : ""}`}
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-primary/20 via-black to-accent/10 text-center px-4">
+            <div className="p-4 rounded-full bg-primary/20 border border-primary/40">
+              <Play className="h-8 w-8 text-primary" />
+            </div>
+            <p className="text-base sm:text-lg text-foreground">Select a video to start</p>
+          </div>
+        )}
       </div>
+
+      {/* Now playing */}
+      {video && videoId && (
+        <div className="glassmorphism mt-3 rounded-xl border border-border px-4 py-3">
+          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+            <span className="flex items-center gap-1.5 text-xs font-medium text-success">
+              <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
+              Now playing
+            </span>
+            <Badge variant="secondary" className="text-xs bg-primary/20 text-primary border-0">
+              {video.subject}
+            </Badge>
+            {video.chapter && (
+              <Badge variant="outline" className="text-xs border-accent/50 text-accent">
+                {video.chapter}
+              </Badge>
+            )}
+          </div>
+          <h2 className="font-semibold text-sm sm:text-base text-foreground line-clamp-2">
+            {decodeHtml(video.videoTitle)}
+          </h2>
+          {video.channel && (
+            <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
+              <Youtube className="h-3 w-3" />
+              {video.channel}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

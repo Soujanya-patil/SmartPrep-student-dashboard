@@ -4,15 +4,8 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Play, Youtube, AlertCircle, BookOpen, SearchX } from "lucide-react"
+import { cn, decodeHtml } from "@/lib/utils"
 import type { VideoRecommendation } from "@/lib/types"
-
-// YouTube API titles arrive HTML-escaped (e.g. "&amp;")
-function decodeHtml(text: string): string {
-  if (typeof document === "undefined") return text
-  const el = document.createElement("textarea")
-  el.innerHTML = text
-  return el.value
-}
 
 interface VideoSidebarProps {
   videos: VideoRecommendation[]
@@ -23,6 +16,7 @@ interface VideoSidebarProps {
   variant?: "recommended" | "search"
   title?: string
   subtitle?: string
+  className?: string
 }
 
 function VideoCardSkeleton() {
@@ -52,12 +46,18 @@ export function VideoSidebar({
   error,
   variant = "recommended",
   title = "Recommended Videos",
-  subtitle = "AI-powered suggestions for you"
+  subtitle = "AI-powered suggestions for you",
+  className
 }: VideoSidebarProps) {
   const isSearch = variant === "search"
 
   return (
-    <aside className="w-full lg:w-80 shrink-0 border-r border-border bg-card/50 flex flex-col h-full">
+    <aside
+      className={cn(
+        "w-full flex flex-col overflow-hidden rounded-2xl border border-border bg-card/50 glassmorphism",
+        className
+      )}
+    >
       {/* Header */}
       <div className="p-4 border-b border-border bg-gradient-to-r from-primary/20 to-accent/20">
         <div className="flex items-center gap-2">
@@ -72,7 +72,7 @@ export function VideoSidebar({
       </div>
 
       {/* Video List */}
-      <ScrollArea className="flex-1" id="video-list">
+      <ScrollArea className="lg:flex-1 lg:min-h-0" id="video-list">
         <div className="p-3 space-y-3" aria-busy={isLoading}>
           {isLoading ? (
             Array.from({ length: 5 }, (_, i) => <VideoCardSkeleton key={i} />)

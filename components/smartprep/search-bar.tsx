@@ -85,7 +85,7 @@ export function SearchBar({ onSearch, isSearching, debounceMs = 400 }: SearchBar
           aria-label="Filter by subject"
           className="w-full sm:w-44 h-10 bg-background/40 border-border focus-visible:border-primary"
         >
-          <SelectValue />
+          <SelectValue>{subject === "All" ? "All subjects" : subject}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {SUBJECT_FILTERS.map((option) => (

@@ -13,6 +13,8 @@ import type { VideoRecommendation, AttentionCheck, VideoSearchParams, SubjectFil
 const USER_ID = 1
 const CHECK_INTERVAL = 15 * 60 // 15 minutes in seconds
 const MIN_QUERY_LENGTH = 2
+// Desktop: fixed-width right column that scrolls on its own; height leaves room for header, search bar and the fixed timer
+const SIDEBAR_CLASSES = "lg:w-96 lg:shrink-0 lg:sticky lg:top-4 lg:h-[calc(100dvh-15.5rem)]"
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? `${fallback} ${err.message}` : fallback
@@ -46,12 +48,18 @@ export function Dashboard() {
   const [isLoadingCheck, setIsLoadingCheck] = useState(false)
   const [checkError, setCheckError] = useState<string | null>(null)
 
+  const playerRef = useRef<HTMLElement | null>(null)
+
   // Handle video selection
   const handleSelectVideo = useCallback((video: VideoRecommendation) => {
     setIsAutoMuted(false)
     setSelectedVideo(video)
     setTimeRemaining(CHECK_INTERVAL)
     setIsTimerActive(true)
+
+    // Bring the player into view (the list sits below it on mobile/tablet)
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    playerRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" })
   }, [])
 
   // Load video recommendations
@@ -195,7 +203,20 @@ export function Dashboard() {
         </div>
       </div>
 
-      <main className="flex-1 flex flex-col lg:flex-row pb-16">
+      <main className="flex-1 w-full max-w-screen-2xl mx-auto px-3 sm:px-4 pt-4 pb-28 flex flex-col lg:flex-row lg:items-start gap-4">
+        {/* Player first in the DOM so it is always on top on mobile/tablet; sticky beside the list on desktop */}
+        <section
+          ref={playerRef}
+          aria-label="Video player"
+          className="w-full min-w-0 lg:flex-1 lg:sticky lg:top-4 scroll-mt-4"
+        >
+          <YouTubePlayer
+            video={selectedVideo}
+            isPaused={showAttentionPopup}
+            muted={isAutoMuted}
+          />
+        </section>
+
         {isSearchMode ? (
           <VideoSidebar
             variant="search"
@@ -206,6 +227,7 @@ export function Dashboard() {
             onSelectVideo={handleSelectVideo}
             isLoading={isSearching}
             error={searchError}
+            className={SIDEBAR_CLASSES}
           />
         ) : (
           <VideoSidebar
@@ -215,14 +237,9 @@ export function Dashboard() {
             onSelectVideo={handleSelectVideo}
             isLoading={isLoadingRecommended}
             error={recommendedError}
+            className={SIDEBAR_CLASSES}
           />
         )}
-
-        <YouTubePlayer
-          video={selectedVideo}
-          isPaused={showAttentionPopup}
-          muted={isAutoMuted}
-        />
       </main>
 
       <CountdownTimer
