@@ -1,4 +1,4 @@
-import type { AttentionCheck, VideoRecommendation, VideoSearchParams } from "./types"
+import type { AttentionCheck, SubjectFilter, VideoRecommendation, VideoSearchParams } from "./types"
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api"
 
@@ -86,4 +86,16 @@ export async function fetchAttentionCheck(
 ): Promise<AttentionCheck> {
   const params = new URLSearchParams({ subject, chapter })
   return getJson<AttentionCheck>(`${VIDEO_PATH}/attention-check?${params}`, signal)
+}
+
+export async function suggestTopics(
+  query: string,
+  subject: SubjectFilter,
+  signal?: AbortSignal
+): Promise<string[]> {
+  const params = new URLSearchParams({
+    q: query,
+    subject: subject === "All" ? "" : subject,
+  })
+  return getJson<string[]>(`${VIDEO_PATH}/suggest?${params}`, signal)
 }
