@@ -1,11 +1,18 @@
 "use client"
 
-import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Spinner } from "@/components/ui/spinner"
-import { Play, Youtube, AlertCircle, BookOpen, Search } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Play, Youtube, AlertCircle, BookOpen, SearchX } from "lucide-react"
 import type { VideoRecommendation } from "@/lib/types"
+
+// YouTube API titles arrive HTML-escaped (e.g. "&amp;")
+function decodeHtml(text: string): string {
+  if (typeof document === "undefined") return text
+  const el = document.createElement("textarea")
+  el.innerHTML = text
+  return el.value
+}
 
 interface VideoSidebarProps {
   videos: VideoRecommendation[]
@@ -13,7 +20,28 @@ interface VideoSidebarProps {
   onSelectVideo: (video: VideoRecommendation) => void
   isLoading: boolean
   error: string | null
-  onSearch: (subject: string, chapter: string) => void
+  variant?: "recommended" | "search"
+  title?: string
+  subtitle?: string
+}
+
+function VideoCardSkeleton() {
+  return (
+    <div className="p-3 rounded-xl border border-border bg-card/80 glassmorphism">
+      <div className="flex items-start gap-3">
+        <Skeleton className="h-8 w-8 rounded-lg bg-primary/20" />
+        <div className="flex-1 space-y-2">
+          <div className="flex gap-1.5">
+            <Skeleton className="h-4 w-16 rounded-full bg-primary/20" />
+            <Skeleton className="h-4 w-20 rounded-full bg-muted" />
+          </div>
+          <Skeleton className="h-3.5 w-full bg-muted" />
+          <Skeleton className="h-3.5 w-3/4 bg-muted" />
+          <Skeleton className="h-3 w-24 bg-muted" />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function VideoSidebar({
@@ -22,20 +50,11 @@ export function VideoSidebar({
   onSelectVideo,
   isLoading,
   error,
-  onSearch
+  variant = "recommended",
+  title = "Recommended Videos",
+  subtitle = "AI-powered suggestions for you"
 }: VideoSidebarProps) {
-  const [searchSubject, setSearchSubject] = useState("")
-  const [searchChapter, setSearchChapter] = useState("")
-
-  const handleSearch = () => {
-    if (searchSubject.trim() && searchChapter.trim()) {
-      onSearch(searchSubject.trim(), searchChapter.trim())
-    }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSearch()
-  }
+  const isSearch = variant === "search"
 
   return (
     <aside className="w-full lg:w-80 shrink-0 border-r border-border bg-card/50 flex flex-col h-full">
@@ -45,49 +64,18 @@ export function VideoSidebar({
           <div className="p-2 rounded-lg bg-primary/20 animate-pulse-border border border-primary/50">
             <BookOpen className="h-5 w-5 text-primary" />
           </div>
-          <div>
-            <h2 className="font-semibold text-foreground">Recommended Videos</h2>
-            <p className="text-xs text-muted-foreground">AI-powered suggestions for you</p>
+          <div className="min-w-0">
+            <h2 className="font-semibold text-foreground">{title}</h2>
+            <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
           </div>
-        </div>
-      </div>
-
-      {/* Search Bar */}
-      <div className="p-3 border-b border-border space-y-2">
-        <input
-          type="text"
-          placeholder="Subject (e.g. Biology)"
-          value={searchSubject}
-          onChange={(e) => setSearchSubject(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="w-full px-3 py-2 text-sm rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-        />
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Topic (e.g. Mitosis)"
-            value={searchChapter}
-            onChange={(e) => setSearchChapter(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="flex-1 px-3 py-2 text-sm rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-          />
-          <button
-            onClick={handleSearch}
-            className="px-3 py-2 bg-primary rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Search className="h-4 w-4 text-white" />
-          </button>
         </div>
       </div>
 
       {/* Video List */}
       <ScrollArea className="flex-1" id="video-list">
-        <div className="p-3 space-y-3">
+        <div className="p-3 space-y-3" aria-busy={isLoading}>
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <Spinner className="h-8 w-8 text-primary" />
-              <p className="text-sm text-muted-foreground">Loading recommendations...</p>
-            </div>
+            Array.from({ length: 5 }, (_, i) => <VideoCardSkeleton key={i} />)
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-4">
               <div className="p-3 rounded-full bg-destructive/10">
@@ -96,14 +84,24 @@ export function VideoSidebar({
               <p className="text-sm text-muted-foreground">{error}</p>
             </div>
           ) : videos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-4">
-              <div className="p-3 rounded-full bg-success/10">
-                <Youtube className="h-6 w-6 text-success" />
+            isSearch ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-4">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <SearchX className="h-6 w-6 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground">No videos found</p>
+                <p className="text-xs text-muted-foreground">
+                  Try a different topic, check the spelling, or switch to &quot;All subjects&quot;.
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                No weak topics found! Search above to explore any topic 🎯
-              </p>
-            </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-4">
+                <div className="p-3 rounded-full bg-success/10">
+                  <Youtube className="h-6 w-6 text-success" />
+                </div>
+                <p className="text-sm text-muted-foreground">No weak topics found! You&apos;re doing great!</p>
+              </div>
+            )
           ) : (
             videos.map((video, index) => {
               const isSelected = selectedVideo?.youtubeUrl === video.youtubeUrl
@@ -128,12 +126,14 @@ export function VideoSidebar({
                         <Badge variant="secondary" className="text-xs bg-primary/20 text-primary border-0">
                           {video.subject}
                         </Badge>
-                        <Badge variant="outline" className="text-xs border-accent/50 text-accent">
-                          {video.chapter}
-                        </Badge>
+                        {video.chapter && (
+                          <Badge variant="outline" className="text-xs border-accent/50 text-accent">
+                            {video.chapter}
+                          </Badge>
+                        )}
                       </div>
                       <h3 className="font-medium text-sm text-foreground line-clamp-2 mb-1">
-                        {video.videoTitle}
+                        {decodeHtml(video.videoTitle)}
                       </h3>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <Youtube className="h-3 w-3" />

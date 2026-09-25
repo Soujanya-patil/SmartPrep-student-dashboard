@@ -57,7 +57,8 @@ export function AttentionPopup({
       id="popup-overlay"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/95 backdrop-blur-sm"
     >
-      <div className="w-full max-w-2xl rounded-2xl border-2 border-primary bg-card p-6 shadow-2xl shadow-primary/20 animate-in zoom-in-95 duration-300 overflow-y-auto max-h-[90vh]"> {/* Header */}
+      <div className="w-full max-w-2xl rounded-2xl border-2 border-primary bg-card p-6 shadow-2xl shadow-primary/20 animate-in zoom-in-95 duration-300"> 
+        {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-accent animate-pulse">
             <Brain className="h-6 w-6 text-white" />

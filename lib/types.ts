@@ -4,6 +4,7 @@ export interface VideoRecommendation {
   videoTitle: string
   channel: string
   youtubeUrl: string
+  thumbnail?: string
 }
 
 export interface AttentionCheck {
@@ -15,4 +16,13 @@ export interface AttentionCheck {
   correctOption: 'A' | 'B' | 'C' | 'D'
   encouragement: string
   hint: string
+}
+
+export const SUBJECT_FILTERS = ['All', 'Physics', 'Chemistry', 'Maths', 'Biology'] as const
+
+export type SubjectFilter = (typeof SUBJECT_FILTERS)[number]
+
+export interface VideoSearchParams {
+  query: string
+  subject: SubjectFilter
 }

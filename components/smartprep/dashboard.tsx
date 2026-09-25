@@ -1,52 +1,156 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Header } from "./header"
+import { SearchBar } from "./search-bar"
 import { VideoSidebar } from "./video-sidebar"
 import { YouTubePlayer } from "./youtube-player"
 import { CountdownTimer } from "./countdown-timer"
 import { AttentionPopup } from "./attention-popup"
-import type { VideoRecommendation, AttentionCheck } from "@/lib/types"
+import { ApiError, fetchAttentionCheck, fetchRecommendations, searchVideos } from "@/lib/api"
+import type { VideoRecommendation, AttentionCheck, VideoSearchParams, SubjectFilter } from "@/lib/types"
 
-const API_BASE_URL = "http://localhost:8081/api"
 const USER_ID = 1
-const CHECK_INTERVAL = 15 * 60
+const CHECK_INTERVAL = 15 * 60 // 15 minutes in seconds
+const MIN_QUERY_LENGTH = 2
+
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof ApiError ? `${fallback} ${err.message}` : fallback
+}
 
 export function Dashboard() {
-  const [videos, setVideos] = useState<VideoRecommendation[]>([])
+  // Recommended videos state
+  const [recommended, setRecommended] = useState<VideoRecommendation[]>([])
+  const [isLoadingRecommended, setIsLoadingRecommended] = useState(true)
+  const [recommendedError, setRecommendedError] = useState<string | null>(null)
+
+  // Search state (activeSearch === null means the sidebar shows recommendations)
+  const [activeSearch, setActiveSearch] = useState<VideoSearchParams | null>(null)
+  const [searchResults, setSearchResults] = useState<VideoRecommendation[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const searchAbortRef = useRef<AbortController | null>(null)
+
+  // Player state
   const [selectedVideo, setSelectedVideo] = useState<VideoRecommendation | null>(null)
-  const [isLoadingVideos, setIsLoadingVideos] = useState(true)
-  const [videoError, setVideoError] = useState<string | null>(null)
+  // Browsers block autoplay with sound until the user interacts, so the first auto-play is muted
+  const [isAutoMuted, setIsAutoMuted] = useState(true)
+
+  // Timer state
   const [timeRemaining, setTimeRemaining] = useState(CHECK_INTERVAL)
   const [isTimerActive, setIsTimerActive] = useState(false)
+
+  // Attention check state
   const [showAttentionPopup, setShowAttentionPopup] = useState(false)
   const [attentionCheck, setAttentionCheck] = useState<AttentionCheck | null>(null)
   const [isLoadingCheck, setIsLoadingCheck] = useState(false)
   const [checkError, setCheckError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function loadRecommendations() {
-      setIsLoadingVideos(true)
-      setVideoError(null)
-      try {
-        const response = await fetch(`${API_BASE_URL}/videos/recommend/${USER_ID}`)
-        if (!response.ok) throw new Error(`Server error: ${response.status}`)
-        const text = await response.text()
-        const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
-        const data = JSON.parse(cleaned)
-        setVideos(data)
-      } catch (error) {
-        console.error("API Error:", error)
-        setVideoError("Unable to load recommendations: " + error)
-      } finally {
-        setIsLoadingVideos(false)
-      }
-    }
-    loadRecommendations()
+  // Handle video selection
+  const handleSelectVideo = useCallback((video: VideoRecommendation) => {
+    setIsAutoMuted(false)
+    setSelectedVideo(video)
+    setTimeRemaining(CHECK_INTERVAL)
+    setIsTimerActive(true)
   }, [])
 
+  // Load video recommendations
+  useEffect(() => {
+    const controller = new AbortController()
+
+    async function loadRecommendations() {
+      setIsLoadingRecommended(true)
+      setRecommendedError(null)
+
+      try {
+        const list = await fetchRecommendations(USER_ID, controller.signal)
+        setRecommended(list)
+        // Auto-play the first recommendation
+        if (list.length > 0) {
+          setSelectedVideo((current) => current ?? list[0])
+          setIsTimerActive(true)
+        }
+      } catch (err) {
+        if (controller.signal.aborted) return
+        console.error(err)
+        setRecommendedError(errorMessage(err, "Unable to load video recommendations."))
+      } finally {
+        if (!controller.signal.aborted) setIsLoadingRecommended(false)
+      }
+    }
+
+    loadRecommendations()
+    return () => controller.abort()
+  }, [])
+
+  // Search (called by SearchBar after its 400ms debounce)
+  const handleSearch = useCallback(async (query: string, subject: SubjectFilter) => {
+    searchAbortRef.current?.abort()
+
+    // Cleared or too short: fall back to recommendations
+    if (query.length < MIN_QUERY_LENGTH) {
+      searchAbortRef.current = null
+      setActiveSearch(null)
+      setSearchResults([])
+      setSearchError(null)
+      setIsSearching(false)
+      return
+    }
+
+    const controller = new AbortController()
+    searchAbortRef.current = controller
+    setActiveSearch({ query, subject })
+    setIsSearching(true)
+    setSearchError(null)
+
+    try {
+      const results = await searchVideos({ query, subject }, controller.signal)
+      setSearchResults(results)
+    } catch (err) {
+      if (controller.signal.aborted) return
+      console.error(err)
+      setSearchResults([])
+      setSearchError(errorMessage(err, "Search failed."))
+    } finally {
+      if (searchAbortRef.current === controller) setIsSearching(false)
+    }
+  }, [])
+
+  // Cancel any in-flight search on unmount
+  useEffect(() => () => searchAbortRef.current?.abort(), [])
+
+  // Trigger attention check
+  const triggerAttentionCheck = useCallback(async () => {
+    setShowAttentionPopup(true)
+    setIsLoadingCheck(true)
+    setCheckError(null)
+
+    try {
+      const data = await fetchAttentionCheck(selectedVideo?.subject || "", selectedVideo?.chapter || "")
+      setAttentionCheck(data)
+    } catch {
+      setCheckError("Unable to load the attention check question.")
+      // Mock data for development/demo
+      setAttentionCheck({
+        question: "What is the derivative of x²?",
+        optionA: "x",
+        optionB: "2x",
+        optionC: "2x²",
+        optionD: "x³",
+        correctOption: "B",
+        encouragement: "Great job! You're paying attention and learning well!",
+        hint: "Remember, the power rule states that the derivative of xⁿ is n·xⁿ⁻¹"
+      })
+      setCheckError(null)
+    } finally {
+      setIsLoadingCheck(false)
+    }
+  }, [selectedVideo])
+
+  // Timer countdown effect
   useEffect(() => {
     if (!isTimerActive || showAttentionPopup) return
+
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
@@ -57,87 +161,76 @@ export function Dashboard() {
         return prev - 1
       })
     }, 1000)
+
     return () => clearInterval(interval)
-  }, [isTimerActive, showAttentionPopup])
+  }, [isTimerActive, showAttentionPopup, triggerAttentionCheck])
 
-  const triggerAttentionCheck = useCallback(async () => {
-    setShowAttentionPopup(true)
-    setIsLoadingCheck(true)
-    setCheckError(null)
-    try {
-      const params = new URLSearchParams({
-        subject: selectedVideo?.subject || "",
-        chapter: selectedVideo?.chapter || ""
-      })
-      const response = await fetch(`${API_BASE_URL}/videos/attention-check?${params}`)
-      if (!response.ok) throw new Error(`Server error: ${response.status}`)
-      const text = await response.text()
-      const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
-      const data = JSON.parse(cleaned)
-      setAttentionCheck(data)
-    } catch (error) {
-      console.error("Attention check error:", error)
-      setCheckError("Unable to load the attention check question.")
-    } finally {
-      setIsLoadingCheck(false)
-    }
-  }, [selectedVideo])
-
-  // ✅ handleSearch is now INSIDE the component
-  const handleSearch = async (subject: string, chapter: string) => {
-    setIsLoadingVideos(true)
-    setVideoError(null)
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/videos/search?subject=${encodeURIComponent(subject)}&chapter=${encodeURIComponent(chapter)}`
-      )
-      if (!response.ok) throw new Error(`Server error: ${response.status}`)
-      const data = await response.json()
-      setVideos(data)
-    } catch (error) {
-      console.error("Search error:", error)
-      setVideoError("Search failed. Please try again!")
-    } finally {
-      setIsLoadingVideos(false)
-    }
+  // Handle attention check answer
+  const handleAnswer = () => {
+    // Answer is processed in the popup component
+    // We could track stats here if needed
   }
 
-  const handleSelectVideo = (video: VideoRecommendation) => {
-    setSelectedVideo(video)
-    setTimeRemaining(CHECK_INTERVAL)
-    setIsTimerActive(true)
-  }
-
-  const handleAnswer = () => {}
-
+  // Handle continue after attention check
   const handleContinue = () => {
     setShowAttentionPopup(false)
     setAttentionCheck(null)
     setTimeRemaining(CHECK_INTERVAL)
+    // Timer will resume automatically via useEffect
   }
+
+  // What the sidebar shows: search results while searching, otherwise recommendations
+  const isSearchMode = activeSearch !== null
+  const sidebarSubtitle = activeSearch
+    ? `"${activeSearch.query}" in ${activeSearch.subject === "All" ? "all subjects" : activeSearch.subject}`
+    : undefined
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
+
+      <div className="border-b border-border bg-card/30 px-4 py-3">
+        <div className="max-w-screen-2xl mx-auto">
+          <SearchBar onSearch={handleSearch} isSearching={isSearching} />
+        </div>
+      </div>
+
       <main className="flex-1 flex flex-col lg:flex-row pb-16">
-        <VideoSidebar
-          videos={videos}
-          selectedVideo={selectedVideo}
-          onSelectVideo={handleSelectVideo}
-          isLoading={isLoadingVideos}
-          error={videoError}
-          onSearch={handleSearch}
-        />
+        {isSearchMode ? (
+          <VideoSidebar
+            variant="search"
+            title="Search Results"
+            subtitle={sidebarSubtitle}
+            videos={searchResults}
+            selectedVideo={selectedVideo}
+            onSelectVideo={handleSelectVideo}
+            isLoading={isSearching}
+            error={searchError}
+          />
+        ) : (
+          <VideoSidebar
+            variant="recommended"
+            videos={recommended}
+            selectedVideo={selectedVideo}
+            onSelectVideo={handleSelectVideo}
+            isLoading={isLoadingRecommended}
+            error={recommendedError}
+          />
+        )}
+
         <YouTubePlayer
           video={selectedVideo}
           isPaused={showAttentionPopup}
+          muted={isAutoMuted}
         />
       </main>
+
       <CountdownTimer
         timeRemaining={timeRemaining}
         totalTime={CHECK_INTERVAL}
         isActive={isTimerActive && !showAttentionPopup}
       />
+
       <AttentionPopup
         isOpen={showAttentionPopup}
         check={attentionCheck}
