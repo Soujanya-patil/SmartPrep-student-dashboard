@@ -26,3 +26,44 @@ export interface VideoSearchParams {
   query: string
   subject: SubjectFilter
 }
+
+// ---------- Pomodoro / study log ----------
+
+export const STUDY_DURATIONS = [15, 25, 45] as const
+
+export type StudyDuration = (typeof STUDY_DURATIONS)[number]
+
+export type PomodoroPhase = 'study' | 'break'
+
+export type PomodoroStatus = 'idle' | 'running' | 'paused'
+
+export interface PomodoroState {
+  phase: PomodoroPhase
+  status: PomodoroStatus
+  studyMinutes: StudyDuration
+  /** Epoch ms when the current phase ends; set only while running */
+  endsAt: number | null
+  /** Time left in the current phase; authoritative while idle or paused */
+  remainingMs: number
+}
+
+export type StudySessionType = 'STUDY' | 'BREAK'
+
+export interface StudySessionPayload {
+  userId: number
+  subject: string
+  chapter: string
+  durationMinutes: number
+  sessionType: StudySessionType
+}
+
+export interface TodayStudyStats {
+  totalMinutes: number
+  sessionCount: number
+}
+
+export interface DailyStudyMinutes {
+  /** yyyy-MM-dd */
+  date: string
+  minutes: number
+}

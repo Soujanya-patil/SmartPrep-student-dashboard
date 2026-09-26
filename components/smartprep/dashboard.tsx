@@ -7,6 +7,8 @@ import { VideoSidebar } from "./video-sidebar"
 import { YouTubePlayer } from "./youtube-player"
 import { CountdownTimer } from "./countdown-timer"
 import { AttentionPopup } from "./attention-popup"
+import { PomodoroTimer } from "./pomodoro-timer"
+import { Toaster } from "@/components/ui/sonner"
 import { ApiError, fetchAttentionCheck, fetchRecommendations, searchVideos } from "@/lib/api"
 import type { VideoRecommendation, AttentionCheck, VideoSearchParams, SubjectFilter } from "@/lib/types"
 
@@ -207,13 +209,19 @@ export function Dashboard() {
         {/* Player first in the DOM so it is always on top on mobile/tablet; sticky beside the list on desktop */}
         <section
           ref={playerRef}
-          aria-label="Video player"
+          aria-label="Video player and study timer"
           className="w-full min-w-0 lg:flex-1 lg:sticky lg:top-4 scroll-mt-4"
         >
           <YouTubePlayer
             video={selectedVideo}
             isPaused={showAttentionPopup}
             muted={isAutoMuted}
+          />
+          <PomodoroTimer
+            className="mt-4"
+            userId={USER_ID}
+            subject={selectedVideo?.subject}
+            chapter={selectedVideo?.chapter}
           />
         </section>
 
@@ -256,6 +264,8 @@ export function Dashboard() {
         onAnswer={handleAnswer}
         onContinue={handleContinue}
       />
+
+      <Toaster theme="dark" position="top-center" richColors closeButton />
     </div>
   )
 }

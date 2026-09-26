@@ -1,9 +1,19 @@
-import type { AttentionCheck, SubjectFilter, VideoRecommendation, VideoSearchParams } from "./types"
+import type {
+  AttentionCheck,
+  DailyStudyMinutes,
+  StudySessionPayload,
+  SubjectFilter,
+  TodayStudyStats,
+  VideoRecommendation,
+  VideoSearchParams,
+} from "./types"
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081/api"
 
 // Controller prefix on the Spring Boot side (@RequestMapping("/api/video"))
 const VIDEO_PATH = "/video"
+// Pomodoro study sessions (StudyLogController, "/api/studylog/...")
+const STUDYLOG_PATH = "/studylog"
 
 export class ApiError extends Error {
   status?: number
@@ -24,12 +34,23 @@ type RawVideo = Partial<
 >
 
 async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+  return requestJson<T>(path, { signal, headers: { Accept: "application/json" } })
+}
+
+async function postJson<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  return requestJson<T>(path, {
+    method: "POST",
+    signal,
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+}
+
+async function requestJson<T>(path: string, init: RequestInit): Promise<T> {
+  const signal = init.signal
   let response: Response
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      signal,
-      headers: { Accept: "application/json" },
-    })
+    response = await fetch(`${API_BASE_URL}${path}`, init)
   } catch (err) {
     // Let aborts propagate untouched so callers can ignore them
     if (signal?.aborted) throw err
@@ -98,4 +119,16 @@ export async function suggestTopics(
     subject: subject === "All" ? "" : subject,
   })
   return getJson<string[]>(`${VIDEO_PATH}/suggest?${params}`, signal)
+}
+
+export async function saveStudySession(payload: StudySessionPayload, signal?: AbortSignal): Promise<void> {
+  await postJson<unknown>(`${STUDYLOG_PATH}/save`, payload, signal)
+}
+
+export async function fetchTodayStudyStats(userId: number, signal?: AbortSignal): Promise<TodayStudyStats> {
+  return getJson<TodayStudyStats>(`${STUDYLOG_PATH}/today/${userId}`, signal)
+}
+
+export async function fetchWeekStudyMinutes(userId: number, signal?: AbortSignal): Promise<DailyStudyMinutes[]> {
+  return getJson<DailyStudyMinutes[]>(`${STUDYLOG_PATH}/week/${userId}`, signal)
 }
