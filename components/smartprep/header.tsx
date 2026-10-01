@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { BarChart3, Brain, GraduationCap, LayoutDashboard, Mic, Sparkles, Timer, type LucideIcon } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { BarChart3, Brain, GraduationCap, LayoutDashboard, LogOut, Mic, Sparkles, Timer, type LucideIcon } from "lucide-react"
+import { clearUser, useStoredUser } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 
 const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; icon: LucideIcon }> = [
@@ -15,6 +16,13 @@ const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; icon: LucideIcon }
 
 export function Header() {
   const pathname = usePathname()
+  const router = useRouter()
+  const user = useStoredUser()
+
+  function handleLogout() {
+    clearUser()
+    router.replace("/landing")
+  }
 
   return (
     <header className="relative border-b border-border bg-gradient-to-r from-card via-primary/10 to-info/5 overflow-hidden">
@@ -67,6 +75,16 @@ export function Header() {
             <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
             <span className="text-sm text-info font-medium">Focus Mode</span>
           </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            title={user ? `Logged in as ${user.name}` : undefined}
+            className="flex shrink-0 items-center gap-1.5 self-stretch rounded-xl border border-border bg-background/40 px-3 text-sm font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="sr-only lg:not-sr-only">Logout</span>
+          </button>
         </div>
       </div>
     </header>
