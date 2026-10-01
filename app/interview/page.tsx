@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 
 const API_BASE_URL = "http://localhost:8081/api"
 
@@ -168,52 +169,55 @@ export default function InterviewPage() {
   }
 
   const getBadgeColor = (type: string) => {
-    if (type === "TECHNICAL") return "bg-blue-500/20 text-blue-400 border-blue-500/30"
-    if (type === "APTITUDE") return "bg-purple-500/20 text-purple-400 border-purple-500/30"
-    return "bg-green-500/20 text-green-400 border-green-500/30"
+    if (type === "TECHNICAL") return "bg-info/15 text-info border-info/30"
+    if (type === "APTITUDE") return "bg-primary/20 text-primary-soft border-primary/30"
+    return "bg-success/15 text-success border-success/30"
   }
 
   // SETUP SCREEN
   if (step === "setup") {
     return (
-      <div className="min-h-screen bg-[#0f0f1a] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="w-full max-w-lg">
+          <Link href="/" className="text-primary-soft text-sm hover:text-info mb-6 inline-block">
+            ← Back to Dashboard
+          </Link>
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 icon-gradient rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">🎤</span>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Mock Interview</h1>
-            <p className="text-gray-400">AI-powered placement interview practice with Alex</p>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Mock Interview</h1>
+            <p className="text-muted-foreground">AI-powered placement interview practice with Alex</p>
           </div>
 
-          <div className="bg-[#1a1a2e] rounded-2xl border border-[#2a2a4a] p-6 space-y-4">
+          <div className="surface card-interactive rounded-2xl border border-border p-6 space-y-4">
             <div>
-              <label className="text-sm text-gray-400 mb-2 block">Target Role</label>
+              <label className="text-sm text-muted-foreground mb-2 block">Target Role</label>
               <input
                 type="text"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="w-full px-4 py-3 bg-[#16213e] border border-[#2a2a4a] rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500"
+                className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
                 placeholder="e.g. Software Engineer"
               />
             </div>
 
             <div>
-              <label className="text-sm text-gray-400 mb-2 block">Your Skills</label>
+              <label className="text-sm text-muted-foreground mb-2 block">Your Skills</label>
               <textarea
                 value={skills}
                 onChange={(e) => setSkills(e.target.value)}
                 rows={3}
-                className="w-full px-4 py-3 bg-[#16213e] border border-[#2a2a4a] rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 resize-none"
+                className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary resize-none"
                 placeholder="e.g. Java, Spring Boot, MySQL, REST APIs"
               />
             </div>
 
             <div className="grid grid-cols-3 gap-3 pt-2">
               {["4 Technical", "3 Aptitude", "3 HR"].map((item) => (
-                <div key={item} className="bg-[#16213e] rounded-xl p-3 text-center border border-[#2a2a4a]">
-                  <p className="text-white text-sm font-medium">{item}</p>
-                  <p className="text-gray-500 text-xs">questions</p>
+                <div key={item} className="bg-secondary rounded-xl p-3 text-center border border-border">
+                  <p className="text-foreground text-sm font-medium">{item}</p>
+                  <p className="text-muted-foreground text-xs">questions</p>
                 </div>
               ))}
             </div>
@@ -221,7 +225,7 @@ export default function InterviewPage() {
             <button
               onClick={startInterview}
               disabled={isLoading}
-              className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="w-full py-4 btn-primary rounded-xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? "Preparing your interview..." : "Start Interview 🚀"}
             </button>
@@ -235,61 +239,64 @@ export default function InterviewPage() {
   if (step === "interview") {
     const current = questions[currentIndex]
     return (
-      <div className="min-h-screen bg-[#0f0f1a] p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="max-w-3xl mx-auto">
+          <Link href="/" className="text-primary-soft text-sm hover:text-info mb-6 inline-block">
+            ← Back to Dashboard
+          </Link>
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 icon-gradient rounded-xl flex items-center justify-center">
                 <span>🎤</span>
               </div>
               <div>
-                <h1 className="text-white font-bold">Mock Interview</h1>
-                <p className="text-gray-400 text-sm">with Alex • {role}</p>
+                <h1 className="text-foreground font-bold">Mock Interview</h1>
+                <p className="text-muted-foreground text-sm">with Alex • {role}</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-white font-bold">{currentIndex + 1}/{questions.length}</p>
-              <p className="text-gray-400 text-sm">questions</p>
+              <p className="text-foreground font-bold">{currentIndex + 1}/{questions.length}</p>
+              <p className="text-muted-foreground text-sm">questions</p>
             </div>
           </div>
 
           {/* Progress bar */}
-          <div className="w-full h-2 bg-[#2a2a4a] rounded-full mb-6">
+          <div className="w-full h-2 bg-muted rounded-full mb-6">
             <div
-              className="h-full bg-gradient-to-r from-purple-600 to-blue-600 rounded-full transition-all duration-500"
+              className="h-full bg-gradient-accent rounded-full transition-all duration-500"
               style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
             />
           </div>
 
           {/* Question card */}
-          <div className="bg-[#1a1a2e] rounded-2xl border border-[#2a2a4a] p-6 mb-4">
+          <div className="surface card-interactive rounded-2xl border border-border p-6 mb-4">
             <div className="flex items-center gap-2 mb-4">
               <span className={`text-xs px-3 py-1 rounded-full border font-medium ${getBadgeColor(current.type)}`}>
                 {current.type}
               </span>
-              <span className="text-gray-500 text-xs">Question {current.questionNumber}</span>
+              <span className="text-muted-foreground text-xs">Question {current.questionNumber}</span>
             </div>
 
             {/* Alex avatar */}
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full flex items-center justify-center shrink-0 text-lg">
+              <div className="w-10 h-10 bg-gradient-to-br from-warning to-accent rounded-full flex items-center justify-center shrink-0 text-lg">
                 👨‍💼
               </div>
-              <div className="bg-[#16213e] rounded-2xl rounded-tl-none p-4 flex-1">
-                <p className="text-white text-sm font-medium mb-1">Alex</p>
-                <p className="text-gray-200">{current.question}</p>
+              <div className="bg-secondary rounded-2xl rounded-tl-none p-4 flex-1">
+                <p className="text-foreground text-sm font-medium mb-1">Alex</p>
+                <p className="text-foreground">{current.question}</p>
               </div>
             </div>
 
             {/* Tip + Replay button */}
             <div className="flex items-center gap-3">
-              <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-3 flex-1">
-                <p className="text-purple-400 text-xs">💡 Tip: {current.tips}</p>
+              <div className="bg-primary/10 border border-primary/25 rounded-xl p-3 flex-1">
+                <p className="text-primary-soft text-xs">💡 Tip: {current.tips}</p>
               </div>
               <button
                 onClick={() => alexSpeak(current.question)}
-                className="px-3 py-3 bg-[#16213e] border border-[#2a2a4a] rounded-xl text-gray-400 hover:text-purple-400 hover:border-purple-500 transition-colors text-sm"
+                className="px-3 py-3 bg-secondary border border-border rounded-xl text-muted-foreground hover:text-primary-soft hover:border-primary transition-colors text-sm"
               >
                 🔊
               </button>
@@ -298,55 +305,55 @@ export default function InterviewPage() {
 
           {/* Answer section */}
           {!feedback ? (
-            <div className="bg-[#1a1a2e] rounded-2xl border border-[#2a2a4a] p-6">
-              <label className="text-gray-400 text-sm mb-2 block">Your Answer</label>
+            <div className="surface card-interactive rounded-2xl border border-border p-6">
+              <label className="text-muted-foreground text-sm mb-2 block">Your Answer</label>
               <textarea
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
                 rows={5}
                 placeholder={isListening ? "🎤 Listening... speak now!" : "Type your answer or use the mic button below..."}
-                className={`w-full px-4 py-3 bg-[#16213e] border rounded-xl text-white placeholder:text-gray-500 focus:outline-none resize-none mb-4 transition-all ${isListening ? 'border-red-500 animate-pulse' : 'border-[#2a2a4a] focus:border-purple-500'}`}
+                className={`w-full px-4 py-3 bg-secondary border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none resize-none mb-4 transition-all ${isListening ? 'border-destructive animate-pulse' : 'border-border focus:border-primary'}`}
               />
               <div className="flex gap-3">
                 <button
                   onClick={startListening}
                   disabled={isListening}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-[#16213e] border border-[#2a2a4a] text-gray-300 hover:border-purple-500 hover:text-purple-400'}`}
+                  className={`px-6 py-3 rounded-xl font-semibold transition-all ${isListening ? 'bg-destructive text-destructive-foreground animate-pulse' : 'bg-secondary border border-border text-foreground/90 hover:border-primary hover:text-primary-soft'}`}
                 >
                   {isListening ? "🎤 Listening..." : "🎤 Speak"}
                 </button>
                 <button
                   onClick={submitAnswer}
                   disabled={isLoading || !answer.trim()}
-                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className="flex-1 py-3 btn-primary rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? "Alex is evaluating..." : "Submit Answer ✓"}
                 </button>
               </div>
             </div>
           ) : (
-            <div className="bg-[#1a1a2e] rounded-2xl border border-[#2a2a4a] p-6 space-y-4">
+            <div className="surface card-interactive rounded-2xl border border-border p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-white font-semibold">Alex's Verdict</p>
-                <div className={`text-2xl font-bold ${feedback.score >= 6 ? 'text-green-400' : 'text-red-400'}`}>
+                <p className="text-foreground font-semibold">Alex's Verdict</p>
+                <div className={`text-2xl font-bold ${feedback.score >= 6 ? 'text-success' : 'text-destructive'}`}>
                   {feedback.score}/10
                 </div>
               </div>
 
-              <div className={`p-4 rounded-xl border ${feedback.passed ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                <p className={`text-sm ${feedback.passed ? 'text-green-400' : 'text-red-400'}`}>
+              <div className={`p-4 rounded-xl border ${feedback.passed ? 'bg-success/10 border-success/30 answer-correct' : 'bg-destructive/10 border-destructive/30 answer-wrong'}`}>
+                <p className={`text-sm ${feedback.passed ? 'text-success' : 'text-destructive'}`}>
                   {feedback.passed ? '✅' : '❌'} {feedback.feedback}
                 </p>
               </div>
 
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                <p className="text-blue-400 text-sm">💡 {feedback.improvement}</p>
+              <div className="bg-info/10 border border-info/25 rounded-xl p-4">
+                <p className="text-info text-sm">💡 {feedback.improvement}</p>
               </div>
 
               <button
                 onClick={nextQuestion}
                 disabled={isLoading}
-                className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="w-full py-3 btn-primary rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? "Generating report..." : currentIndex + 1 >= questions.length ? "See Final Report 📊" : "Next Question →"}
               </button>
@@ -361,60 +368,63 @@ export default function InterviewPage() {
   if (step === "report" && report) {
     const percentage = report.percentage.toFixed(1)
     return (
-      <div className="min-h-screen bg-[#0f0f1a] p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="max-w-2xl mx-auto">
+          <Link href="/" className="text-primary-soft text-sm hover:text-info mb-6 inline-block">
+            ← Back to Dashboard
+          </Link>
           <div className="text-center mb-8">
             <div className="text-6xl mb-4">{report.hired ? "🎉" : "💪"}</div>
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
               {report.hired ? "You're Hired!" : "Keep Grinding!"}
             </h1>
-            <p className="text-gray-400">
+            <p className="text-muted-foreground">
               {report.totalScore}/{report.maxScore} points • {percentage}%
             </p>
           </div>
 
-          <div className="bg-[#1a1a2e] rounded-2xl border border-[#2a2a4a] p-6 mb-4">
-            <div className="flex justify-between text-sm text-gray-400 mb-2">
+          <div className="surface card-interactive rounded-2xl border border-border p-6 mb-4">
+            <div className="flex justify-between text-sm text-muted-foreground mb-2">
               <span>Score</span>
               <span>{percentage}%</span>
             </div>
-            <div className="w-full h-4 bg-[#2a2a4a] rounded-full">
+            <div className="w-full h-4 bg-muted rounded-full">
               <div
-                className={`h-full rounded-full transition-all duration-1000 ${report.hired ? 'bg-gradient-to-r from-green-500 to-emerald-400' : 'bg-gradient-to-r from-orange-500 to-red-400'}`}
+                className={`h-full rounded-full transition-all duration-1000 ${report.hired ? 'bg-gradient-to-r from-success to-info' : 'bg-gradient-to-r from-warning to-destructive'}`}
                 style={{ width: `${percentage}%` }}
               />
             </div>
           </div>
 
-          <div className="bg-[#1a1a2e] rounded-2xl border border-[#2a2a4a] p-6 mb-4">
+          <div className="surface card-interactive rounded-2xl border border-border p-6 mb-4">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full flex items-center justify-center shrink-0 text-lg">
+              <div className="w-10 h-10 bg-gradient-to-br from-warning to-accent rounded-full flex items-center justify-center shrink-0 text-lg">
                 👨‍💼
               </div>
               <div>
-                <p className="text-white font-medium mb-1">Alex says:</p>
-                <p className="text-gray-300">{report.overallFeedback}</p>
+                <p className="text-foreground font-medium mb-1">Alex says:</p>
+                <p className="text-foreground/90">{report.overallFeedback}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-[#1a1a2e] rounded-2xl border border-[#2a2a4a] p-6 mb-4">
-            <h3 className="text-green-400 font-semibold mb-3">✅ Strengths</h3>
+          <div className="surface card-interactive rounded-2xl border border-border p-6 mb-4">
+            <h3 className="text-success font-semibold mb-3">✅ Strengths</h3>
             <ul className="space-y-2">
               {report.strengths.map((s: string, i: number) => (
-                <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
-                  <span className="text-green-400 mt-0.5">•</span> {s}
+                <li key={i} className="text-foreground/90 text-sm flex items-start gap-2">
+                  <span className="text-success mt-0.5">•</span> {s}
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="bg-[#1a1a2e] rounded-2xl border border-[#2a2a4a] p-6 mb-6">
-            <h3 className="text-orange-400 font-semibold mb-3">🎯 Areas to Improve</h3>
+          <div className="surface card-interactive rounded-2xl border border-border p-6 mb-6">
+            <h3 className="text-warning font-semibold mb-3">🎯 Areas to Improve</h3>
             <ul className="space-y-2">
               {report.improvements.map((imp: string, i: number) => (
-                <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
-                  <span className="text-orange-400 mt-0.5">•</span> {imp}
+                <li key={i} className="text-foreground/90 text-sm flex items-start gap-2">
+                  <span className="text-warning mt-0.5">•</span> {imp}
                 </li>
               ))}
             </ul>
@@ -422,7 +432,7 @@ export default function InterviewPage() {
 
           <button
             onClick={() => { setStep("setup"); setQuestions([]); setScores([]); setReport(null); }}
-            className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold text-lg hover:opacity-90 transition-opacity"
+            className="w-full py-4 btn-primary rounded-xl font-semibold text-lg"
           >
             Try Again 🔄
           </button>

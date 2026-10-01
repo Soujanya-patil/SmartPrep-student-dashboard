@@ -183,10 +183,10 @@ export function SearchBar({
     <div
       ref={containerRef}
       // z-30 lifts the dropdown above the player/sidebar (timer bar is z-40, popup z-50)
-      className="glassmorphism relative z-30 flex flex-col sm:flex-row gap-2 p-2 rounded-xl border border-primary/30 shadow-lg shadow-primary/10"
+      className="surface relative z-30 flex flex-col sm:flex-row gap-2 p-2 rounded-xl border border-primary/30 shadow-card transition-[border-color,box-shadow] focus-within:border-info/50"
     >
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-soft pointer-events-none" />
         <Input
           type="text"
           value={query}
@@ -207,7 +207,7 @@ export function SearchBar({
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
           {isSearching ? (
-            <Spinner className="h-4 w-4 text-primary" />
+            <Spinner className="h-4 w-4 text-primary-soft" />
           ) : query ? (
             <button
               type="button"
@@ -241,7 +241,7 @@ export function SearchBar({
       >
         <SelectTrigger
           aria-label="Filter by subject"
-          className="w-full sm:w-44 h-10 bg-background/40 border-border focus-visible:border-primary"
+          className="w-full sm:w-44 h-10 bg-background/40 border-border hover:border-primary/50 focus-visible:border-info focus-visible:ring-info/30"
         >
           <SelectValue>{subject === "All" ? "All subjects" : subject}</SelectValue>
         </SelectTrigger>

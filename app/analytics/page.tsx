@@ -72,14 +72,19 @@ const WEAK_THRESHOLD = 60
 
 // Mirrors the theme tokens in globals.css (Recharts needs concrete colors for SVG attributes)
 const COLORS = {
-  series: "#6c63ff", // --primary
-  good: "#00ab8a", // teal-green, validated against critical for colorblind separation on #1a1a2e
-  critical: "#d03b3b",
-  grid: "#2a2a4a", // --border
-  axisText: "#a1a1aa", // --muted-foreground
-  text: "#e4e4e7", // --foreground
-  surface: "#1a1a2e", // --card
+  barFrom: "#7c5cff", // --primary (bar base)
+  barTo: "#22d3ee", // --info (bar top)
+  line: "#22d3ee", // --info
+  good: "#34d399", // --success: strong topics
+  critical: "#fb7185", // --destructive: weak topics (status is also shown with icons, never color alone)
+  grid: "#262f5c", // --border
+  axisText: "#8f9bc7", // --muted-foreground
+  text: "#f1f5ff", // --foreground
+  surface: "#0f1530", // --card
+  cursor: "rgba(124, 92, 255, 0.12)",
 } as const
+
+const BAR_GRADIENT_ID = "study-hours-gradient"
 
 const AXIS_TICK = { fill: COLORS.axisText, fontSize: 12 }
 
@@ -128,7 +133,7 @@ function ChartTooltip({ active, payload }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null
   const row = payload[0].payload as { tooltipTitle: string; tooltipLines: string[] }
   return (
-    <div className="rounded-lg border border-border bg-popover/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
+    <div className="rounded-lg border border-primary/40 bg-popover/95 px-3 py-2 text-xs shadow-overlay backdrop-blur">
       <p className="mb-1 font-semibold text-foreground">{row.tooltipTitle}</p>
       {row.tooltipLines.map((line) => (
         <p key={line} className="text-muted-foreground">
@@ -153,8 +158,8 @@ function StatCard({
   error: boolean
 }) {
   return (
-    <div className="glassmorphism flex items-center gap-3 rounded-xl border border-border p-4">
-      <div className="shrink-0 rounded-lg border border-primary/30 bg-primary/15 p-2.5 text-primary">{icon}</div>
+    <div className="surface card-interactive flex items-center gap-3 rounded-xl border border-border p-4">
+      <div className="shrink-0 rounded-lg border border-primary/30 bg-primary/15 p-2.5 text-primary-soft">{icon}</div>
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
         {loading ? (
@@ -181,9 +186,9 @@ function ChartCard({
   children: ReactNode
 }) {
   return (
-    <section className="glassmorphism rounded-2xl border border-border p-4 sm:p-5">
+    <section className="surface card-interactive rounded-2xl border border-border p-4 sm:p-5">
       <div className="mb-4 flex items-start gap-2">
-        <div className="mt-0.5 text-primary">{icon}</div>
+        <div className="mt-0.5 text-primary-soft">{icon}</div>
         <div>
           <h2 className="font-semibold text-foreground">{title}</h2>
           <p className="text-xs text-muted-foreground">{description}</p>
@@ -207,7 +212,7 @@ function ChartSkeleton({ height }: { height: number }) {
 function EmptyState({ icon, title, children }: { icon: ReactNode; title: string; children?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-      <div className="rounded-full border border-primary/30 bg-primary/10 p-3 text-primary">{icon}</div>
+      <div className="rounded-full border border-primary/30 bg-primary/10 p-3 text-primary-soft">{icon}</div>
       <p className="text-sm font-medium text-foreground">{title}</p>
       {children && <div className="max-w-sm text-xs text-muted-foreground">{children}</div>}
     </div>
@@ -404,7 +409,7 @@ export default function AnalyticsPage() {
           <div>
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-info"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Dashboard
@@ -468,16 +473,22 @@ export default function AnalyticsPage() {
             ) : !weekHasData ? (
               <EmptyState icon={<Clock className="h-6 w-6" />} title="No study time logged this week">
                 Finish a session on the{" "}
-                <Link href="/timer" className="text-primary underline-offset-4 hover:underline">
+                <Link href="/timer" className="text-info underline-offset-4 hover:underline">
                   Pomodoro timer
                 </Link>{" "}
                 and it will show up here.
               </EmptyState>
             ) : (
               <>
-                <div className="h-64">
+                <div className="h-64 [&_.">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={weekData} margin={{ top: 20, right: 8, left: -8, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id={BAR_GRADIENT_ID} x1="0" y1="1" x2="0" y2="0">
+                          <stop offset="0%" stopColor={COLORS.barFrom} />
+                          <stop offset="100%" stopColor={COLORS.barTo} />
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid vertical={false} stroke={COLORS.grid} />
                       <XAxis dataKey="day" tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: COLORS.grid }} />
                       <YAxis
@@ -489,11 +500,11 @@ export default function AnalyticsPage() {
                         tickFormatter={(v: number) => `${v}h`}
                         domain={[0, Math.ceil(maxHours)]}
                       />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(108, 99, 255, 0.08)" }} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: COLORS.cursor }} />
                       <Bar
                         dataKey="hours"
                         name="Hours"
-                        fill={COLORS.series}
+                        fill={`url(#${BAR_GRADIENT_ID})`}
                         radius={[4, 4, 0, 0]}
                         maxBarSize={36}
                         isAnimationActive={false}
@@ -534,7 +545,7 @@ export default function AnalyticsPage() {
               </EmptyState>
             ) : (
               <>
-                <div className="h-64">
+                <div className="h-64 [&_.">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={quizData} margin={{ top: 12, right: 16, left: -8, bottom: 0 }}>
                       <CartesianGrid vertical={false} stroke={COLORS.grid} />
@@ -567,10 +578,10 @@ export default function AnalyticsPage() {
                         type="monotone"
                         dataKey="score"
                         name="Score"
-                        stroke={COLORS.series}
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: COLORS.series, stroke: COLORS.surface, strokeWidth: 2 }}
-                        activeDot={{ r: 6, fill: COLORS.series, stroke: COLORS.surface, strokeWidth: 2 }}
+                        stroke={COLORS.line}
+                        strokeWidth={2.5}
+                        dot={{ r: 4, fill: COLORS.line, stroke: COLORS.surface, strokeWidth: 2 }}
+                        activeDot={{ r: 6, fill: COLORS.line, stroke: COLORS.surface, strokeWidth: 2 }}
                         isAnimationActive={false}
                       />
                     </LineChart>
@@ -647,7 +658,7 @@ export default function AnalyticsPage() {
                       tickFormatter={(label: string) => truncate(label, isMobile ? 24 : 40)}
                     />
                     <ReferenceLine x={WEAK_THRESHOLD} stroke={COLORS.axisText} strokeDasharray="4 4" />
-                    <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(108, 99, 255, 0.08)" }} />
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill: COLORS.cursor }} />
                     <Bar dataKey="score" name="Average score" radius={[0, 4, 4, 0]} maxBarSize={28} isAnimationActive={false}>
                       {topicData.map((t) => (
                         <Cell key={t.label} fill={t.weak ? COLORS.critical : COLORS.good} />

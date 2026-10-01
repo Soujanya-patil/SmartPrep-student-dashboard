@@ -20,7 +20,7 @@ export function CountdownTimer({ timeRemaining, totalTime, isActive }: Countdown
   const isLow = timeRemaining <= 60 // Last minute warning
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-lg z-40">
+    <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/90 backdrop-blur-lg z-40 shadow-overlay">
       <div className="max-w-screen-2xl mx-auto px-4 py-3">
         <div className="flex items-center gap-4">
           {/* Status Icon */}
@@ -29,7 +29,7 @@ export function CountdownTimer({ timeRemaining, totalTime, isActive }: Countdown
               isLow ? (
                 <Brain className="h-5 w-5 text-accent animate-pulse" />
               ) : (
-                <Zap className="h-5 w-5 text-primary" />
+                <Zap className="h-5 w-5 text-primary-soft" />
               )
             ) : (
               <Clock className="h-5 w-5 text-muted-foreground" />
@@ -43,14 +43,14 @@ export function CountdownTimer({ timeRemaining, totalTime, isActive }: Countdown
                 {isActive ? 'Next check in:' : 'Select a video to start'}
               </span>
               {isActive && (
-                <span className={`text-lg font-mono font-bold ${isLow ? 'text-accent animate-pulse' : 'text-primary'}`}>
+                <span className={`text-lg font-mono font-bold ${isLow ? 'text-accent animate-pulse' : 'text-primary-soft'}`}>
                   {formatTime(timeRemaining)}
                 </span>
               )}
             </div>
             <Progress 
               value={isActive ? progress : 0} 
-              className={`h-2 ${isLow ? '[&>div]:bg-accent' : '[&>div]:bg-primary'}`}
+              className={`h-2 ${isLow ? '[&>div]:bg-none [&>div]:bg-accent' : ''}`}
             />
           </div>
 

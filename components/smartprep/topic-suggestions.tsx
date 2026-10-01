@@ -42,10 +42,10 @@ export function TopicSuggestions({
   onHighlight,
 }: TopicSuggestionsProps) {
   return (
-    <div className="absolute left-0 right-0 top-full mt-2 z-50 overflow-hidden rounded-xl border border-primary/30 bg-card/95 backdrop-blur-xl shadow-2xl shadow-primary/20">
+    <div className="absolute left-0 right-0 top-full mt-2 z-50 overflow-hidden rounded-xl border border-primary/30 bg-card/95 backdrop-blur-xl shadow-overlay">
       {isLoading && suggestions.length === 0 ? (
         <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground" role="status">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <Loader2 className="h-4 w-4 animate-spin text-primary-soft" />
           Finding topics...
         </div>
       ) : suggestions.length === 0 ? (
@@ -72,17 +72,17 @@ export function TopicSuggestions({
                 }}
                 className={cn(
                   "flex items-center gap-3 px-4 py-2.5 text-sm cursor-pointer transition-colors",
-                  isActive ? "bg-primary/20" : "hover:bg-primary/10"
+                  isActive ? "bg-gradient-to-r from-primary/25 to-info/10 text-foreground" : "hover:bg-primary/10"
                 )}
               >
-                <Search className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+                <Search className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-primary-soft" : "text-muted-foreground")} />
                 <HighlightedMatch text={topic} query={query} />
               </li>
             )
           })}
           {isLoading && (
             <li className="flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground" aria-hidden>
-              <Loader2 className="h-3 w-3 animate-spin text-primary" />
+              <Loader2 className="h-3 w-3 animate-spin text-primary-soft" />
               Updating...
             </li>
           )}

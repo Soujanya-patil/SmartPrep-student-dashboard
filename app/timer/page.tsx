@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -131,11 +131,23 @@ function ProgressRing({ fraction, mode, children }: { fraction: number; mode: Mo
   const radius = 90
   const circumference = 2 * Math.PI * radius
   const clamped = Math.min(1, Math.max(0, fraction))
-  const color = mode === "study" ? "var(--primary)" : "var(--success)"
+  const gradientId = `ring-${useId().replace(/:/g, "")}`
+  // Study: violet -> cyan gradient ring; break: mint
+  const stroke = mode === "study" ? `url(#${gradientId})` : "var(--success)"
+  const glow =
+    mode === "study"
+      ? "drop-shadow(0 0 6px rgba(124, 92, 255, 0.8)) drop-shadow(0 0 14px rgba(34, 211, 238, 0.45))"
+      : "drop-shadow(0 0 6px rgba(52, 211, 153, 0.8)) drop-shadow(0 0 14px rgba(52, 211, 153, 0.4))"
 
   return (
     <div className="relative h-60 w-60 sm:h-72 sm:w-72">
-      <svg viewBox="0 0 200 200" className="h-full w-full -rotate-90" aria-hidden>
+      <svg viewBox="0 0 200 200" className="h-full w-full -rotate-90 overflow-visible" aria-hidden>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--primary)" />
+            <stop offset="100%" stopColor="var(--info)" />
+          </linearGradient>
+        </defs>
         <circle cx="100" cy="100" r={radius} fill="none" strokeWidth="8" style={{ stroke: "var(--muted)" }} />
         <circle
           cx="100"
@@ -146,7 +158,7 @@ function ProgressRing({ fraction, mode, children }: { fraction: number; mode: Mo
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - clamped)}
-          style={{ stroke: color, filter: `drop-shadow(0 0 6px ${color})` }}
+          style={{ stroke, filter: glow }}
           className="transition-[stroke-dashoffset] duration-1000 ease-linear"
         />
       </svg>
@@ -167,8 +179,8 @@ function StatCard({
   hint?: string
 }) {
   return (
-    <div className="glassmorphism flex items-center gap-3 rounded-xl border border-border p-4">
-      <div className="shrink-0 rounded-lg border border-primary/30 bg-primary/15 p-2.5 text-primary">{icon}</div>
+    <div className="surface card-interactive flex items-center gap-3 rounded-xl border border-border p-4">
+      <div className="shrink-0 rounded-lg border border-primary/30 bg-primary/15 p-2.5 text-primary-soft">{icon}</div>
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="text-xl font-bold text-foreground tabular-nums">{value}</p>
@@ -349,7 +361,7 @@ export default function TimerPage() {
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-6">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-info"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
@@ -357,7 +369,7 @@ export default function TimerPage() {
 
         <section
           aria-label="Pomodoro timer"
-          className="glassmorphism flex flex-col items-center gap-6 rounded-2xl border border-primary/30 p-5 shadow-2xl shadow-primary/10 sm:p-8"
+          className="surface flex flex-col items-center gap-6 rounded-2xl border border-primary/30 p-5 shadow-raised sm:p-8"
         >
           {/* Mode tabs */}
           <div role="tablist" aria-label="Timer mode" className="flex w-full max-w-xs rounded-xl border border-border bg-background/40 p-1">
@@ -371,12 +383,12 @@ export default function TimerPage() {
                   aria-selected={selected}
                   onClick={() => !selected && switchMode(mode)}
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[.97]",
                     selected
                       ? mode === "study"
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                        : "bg-success text-success-foreground shadow-lg shadow-success/30"
-                      : "text-muted-foreground hover:text-foreground"
+                        ? "icon-gradient"
+                        : "bg-success text-success-foreground"
+                      : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
                   )}
                 >
                   {mode === "study" ? <BookOpen className="h-4 w-4" /> : <Coffee className="h-4 w-4" />}
@@ -387,7 +399,7 @@ export default function TimerPage() {
           </div>
 
           <ProgressRing fraction={fraction} mode={timer.mode}>
-            <span className={cn("text-xs font-medium uppercase tracking-widest", isStudy ? "text-primary" : "text-success")}>
+            <span className={cn("text-xs font-medium uppercase tracking-widest", isStudy ? "text-info" : "text-success")}>
               {isStudy ? "Study" : "Break"}
             </span>
             <span className="font-mono text-5xl font-bold tabular-nums text-foreground sm:text-6xl">{clock}</span>
@@ -404,7 +416,7 @@ export default function TimerPage() {
                   key={i}
                   className={cn(
                     "h-3 w-3 rounded-full border transition-colors",
-                    i < sessionsDone ? "border-primary bg-primary shadow-[0_0_8px_var(--primary)]" : "border-muted-foreground/40 bg-transparent"
+                    i < sessionsDone ? "border-transparent bg-gradient-accent" : "border-muted-foreground/40 bg-transparent"
                   )}
                 />
               ))}
@@ -422,8 +434,8 @@ export default function TimerPage() {
               size="lg"
               onClick={handleStartPause}
               className={cn(
-                "min-w-36 shadow-lg",
-                isStudy ? "shadow-primary/30" : "bg-success text-success-foreground shadow-success/30 hover:bg-success/90"
+                "min-w-36",
+                !isStudy && "bg-none bg-success text-success-foreground"
               )}
             >
               {timer.running ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}

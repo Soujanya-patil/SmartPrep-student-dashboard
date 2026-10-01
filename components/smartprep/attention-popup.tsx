@@ -57,10 +57,10 @@ export function AttentionPopup({
       id="popup-overlay"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/95 backdrop-blur-sm"
     >
-      <div className="w-full max-w-2xl rounded-2xl border-2 border-primary bg-card p-6 shadow-2xl shadow-primary/20 animate-in zoom-in-95 duration-300"> 
+      <div className="w-full max-w-2xl rounded-2xl border-2 border-primary bg-card p-6 animate-in zoom-in-95 duration-300">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-accent animate-pulse">
+          <div className="p-3 rounded-xl icon-gradient animate-pulse">
             <Brain className="h-6 w-6 text-white" />
           </div>
           <div>
@@ -71,7 +71,7 @@ export function AttentionPopup({
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <Spinner className="h-10 w-10 text-primary" />
+            <Spinner className="h-10 w-10 text-primary-soft" />
             <p className="text-muted-foreground">Loading your question...</p>
           </div>
         ) : error ? (
@@ -102,14 +102,14 @@ export function AttentionPopup({
                 
                 if (showResult) {
                   if (isCorrectAnswer) {
-                    buttonClass += " bg-success/20 border-success text-success"
+                    buttonClass += " bg-success/20 border-success text-success answer-correct"
                   } else if (isSelected && !isCorrect) {
-                    buttonClass += " bg-destructive/20 border-destructive text-destructive"
+                    buttonClass += " bg-destructive/20 border-destructive text-destructive answer-wrong"
                   } else {
                     buttonClass += " bg-muted/50 border-border text-muted-foreground opacity-50"
                   }
                 } else {
-                  buttonClass += " bg-card border-border hover:border-primary hover:bg-primary/5 text-foreground"
+                  buttonClass += " bg-card border-border hover:-translate-y-0.5 hover:border-primary hover:bg-primary/10 hover:shadow-raised active:translate-y-0 active:scale-[.99] text-foreground"
                 }
 
                 return (
@@ -159,10 +159,10 @@ export function AttentionPopup({
                     </div>
                     {showHint && (
                       <div className="p-4 rounded-xl bg-primary/10 border border-primary/30 flex items-start gap-3">
-                        <Lightbulb className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                        <Lightbulb className="h-5 w-5 text-primary-soft shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-medium text-primary">Hint for next time:</p>
-                          <p className="text-sm text-primary/80">{check.hint}</p>
+                          <p className="font-medium text-primary-soft">Hint for next time:</p>
+                          <p className="text-sm text-primary-soft/80">{check.hint}</p>
                         </div>
                       </div>
                     )}
@@ -171,7 +171,7 @@ export function AttentionPopup({
 
                 <Button 
                   onClick={handleContinue}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg font-semibold rounded-xl"
+                  className="w-full py-6 text-lg font-semibold rounded-xl"
                 >
                   Continue Watching
                   <ArrowRight className="ml-2 h-5 w-5" />

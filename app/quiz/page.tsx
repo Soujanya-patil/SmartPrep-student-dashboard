@@ -241,7 +241,7 @@ function Confetti() {
     if (!canvas || !ctx) return
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
 
-    const colors = ["#6c63ff", "#ff6584", "#00d4aa", "#fab219", "#ffffff"]
+    const colors = ["#7c5cff", "#22d3ee", "#ff4d9d", "#34d399", "#fbbf24", "#ffffff"]
     const resize = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
@@ -547,7 +547,7 @@ export default function QuizPage() {
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-6">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-info"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
@@ -555,9 +555,9 @@ export default function QuizPage() {
 
         {/* ---------- SETUP ---------- */}
         {stage === "setup" && (
-          <section className="glassmorphism space-y-5 rounded-2xl border border-primary/30 p-5 shadow-2xl shadow-primary/10 sm:p-8">
+          <section className="surface space-y-5 rounded-2xl border border-primary/30 p-5 shadow-raised sm:p-8">
             <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-gradient-to-br from-primary to-accent p-3 shadow-lg shadow-primary/30">
+              <div className="rounded-xl icon-gradient p-3">
                 <Brain className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -643,7 +643,7 @@ export default function QuizPage() {
               size="lg"
               onClick={handleGenerate}
               disabled={!chapter.trim()}
-              className="w-full shadow-lg shadow-primary/30 sm:w-auto"
+              className="w-full sm:w-auto"
             >
               <Sparkles className="h-5 w-5" />
               Generate Quiz
@@ -655,10 +655,10 @@ export default function QuizPage() {
         {stage === "loading" && (
           <section
             aria-busy
-            className="glassmorphism space-y-5 rounded-2xl border border-primary/30 p-5 sm:p-8"
+            className="surface space-y-5 rounded-2xl border border-primary/30 p-5 sm:p-8"
           >
             <div className="flex items-center gap-3 text-sm text-muted-foreground" role="status">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <Loader2 className="h-5 w-5 animate-spin text-primary-soft" />
               Generating your {subject} quiz on “{chapter.trim()}”. New chapters can take up to 30 seconds...
             </div>
             <Skeleton className="h-2 w-full bg-muted" />
@@ -679,7 +679,7 @@ export default function QuizPage() {
 
         {/* ---------- QUIZ ---------- */}
         {stage === "quiz" && question && (
-          <section className="glassmorphism space-y-5 rounded-2xl border border-primary/30 p-5 shadow-2xl shadow-primary/10 sm:p-8">
+          <section className="surface space-y-5 rounded-2xl border border-primary/30 p-5 shadow-raised sm:p-8">
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="font-medium text-foreground">
@@ -692,7 +692,7 @@ export default function QuizPage() {
                       ? "border-border text-muted-foreground"
                       : timerLow
                         ? "animate-pulse border-destructive/50 text-destructive"
-                        : "border-primary/40 text-primary"
+                        : "border-info/40 text-info"
                   )}
                   aria-label={`${secondsLeft} seconds left`}
                 >
@@ -725,9 +725,9 @@ export default function QuizPage() {
                     onClick={() => answer(i)}
                     className={cn(
                       "flex min-h-14 items-center gap-3 rounded-xl border p-3 text-left text-sm transition-all",
-                      !answered && "border-border bg-card/80 hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/10",
-                      answered && isCorrect && "border-success bg-success/15 text-foreground",
-                      answered && isPicked && !isCorrect && "border-destructive bg-destructive/15 text-foreground",
+                      !answered && "card-interactive border-border bg-card/80 hover:-translate-y-0.5 hover:bg-primary/10 active:translate-y-0 active:scale-[.99]",
+                      answered && isCorrect && "answer-correct border-success bg-success/15 text-foreground",
+                      answered && isPicked && !isCorrect && "answer-wrong border-destructive bg-destructive/15 text-foreground",
                       answered && !isCorrect && !isPicked && "border-border bg-card/40 opacity-60"
                     )}
                   >
@@ -737,7 +737,7 @@ export default function QuizPage() {
                         answered && isCorrect
                           ? "bg-success text-success-foreground"
                           : answered && isPicked
-                            ? "bg-destructive text-white"
+                            ? "bg-destructive text-destructive-foreground"
                             : "bg-muted text-foreground"
                       )}
                     >
@@ -802,7 +802,7 @@ export default function QuizPage() {
           <>
             {percentScore >= CONFETTI_PERCENT && <Confetti key={attempt} />}
 
-            <section className="glassmorphism space-y-5 rounded-2xl border border-primary/30 p-5 text-center shadow-2xl shadow-primary/10 sm:p-8">
+            <section className="surface space-y-5 rounded-2xl border border-primary/30 p-5 text-center shadow-overlay sm:p-8">
               <div
                 className={cn(
                   "mx-auto flex h-16 w-16 items-center justify-center rounded-full",
@@ -892,7 +892,7 @@ export default function QuizPage() {
                   <article
                     key={q.key}
                     className={cn(
-                      "glassmorphism rounded-xl border p-4 text-sm",
+                      "surface rounded-xl border p-4 text-sm",
                       correct ? "border-success/40" : "border-destructive/40"
                     )}
                   >

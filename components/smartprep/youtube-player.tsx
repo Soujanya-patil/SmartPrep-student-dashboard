@@ -24,7 +24,7 @@ export function YouTubePlayer({ video, isPaused, muted = false }: YouTubePlayerP
   return (
     <div className="w-full">
       {/* 16:9 frame is always reserved, so the layout never jumps when a video loads */}
-      <div className="relative w-full aspect-video overflow-hidden rounded-2xl bg-black border border-primary/30 shadow-2xl shadow-primary/20">
+      <div className="relative w-full aspect-video overflow-hidden rounded-2xl bg-black border border-primary/30 shadow-raised">
         {videoId ? (
           <iframe
             // key forces a fresh iframe per video so autoplay fires on every switch
@@ -36,9 +36,9 @@ export function YouTubePlayer({ video, isPaused, muted = false }: YouTubePlayerP
             className={`absolute inset-0 h-full w-full border-0 transition-opacity ${isPaused ? "pointer-events-none opacity-50" : ""}`}
           />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-primary/20 via-black to-accent/10 text-center px-4">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-primary/25 via-background to-info/15 text-center px-4">
             <div className="p-4 rounded-full bg-primary/20 border border-primary/40">
-              <Play className="h-8 w-8 text-primary" />
+              <Play className="h-8 w-8 text-primary-soft" />
             </div>
             <p className="text-base sm:text-lg text-foreground">Select a video to start</p>
           </div>
@@ -47,13 +47,13 @@ export function YouTubePlayer({ video, isPaused, muted = false }: YouTubePlayerP
 
       {/* Now playing */}
       {video && videoId && (
-        <div className="glassmorphism mt-3 rounded-xl border border-border px-4 py-3">
+        <div className="surface mt-3 rounded-xl border border-border px-4 py-3">
           <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
             <span className="flex items-center gap-1.5 text-xs font-medium text-success">
               <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
               Now playing
             </span>
-            <Badge variant="secondary" className="text-xs bg-primary/20 text-primary border-0">
+            <Badge variant="secondary" className="text-xs bg-primary/20 text-primary-soft border-0">
               {video.subject}
             </Badge>
             {video.chapter && (

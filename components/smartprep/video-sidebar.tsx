@@ -21,7 +21,7 @@ interface VideoSidebarProps {
 
 function VideoCardSkeleton() {
   return (
-    <div className="p-3 rounded-xl border border-border bg-card/80 glassmorphism">
+    <div className="p-3 rounded-xl border border-border bg-card/80 surface">
       <div className="flex items-start gap-3">
         <Skeleton className="h-8 w-8 rounded-lg bg-primary/20" />
         <div className="flex-1 space-y-2">
@@ -54,15 +54,15 @@ export function VideoSidebar({
   return (
     <aside
       className={cn(
-        "w-full flex flex-col overflow-hidden rounded-2xl border border-border bg-card/50 glassmorphism",
+        "w-full flex flex-col overflow-hidden rounded-2xl border border-border bg-card/50 surface",
         className
       )}
     >
       {/* Header */}
-      <div className="p-4 border-b border-border bg-gradient-to-r from-primary/20 to-accent/20">
+      <div className="p-4 border-b border-border bg-gradient-to-r from-primary/20 via-info/10 to-accent/15">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-primary/20 animate-pulse-border border border-primary/50">
-            <BookOpen className="h-5 w-5 text-primary" />
+          <div className="p-2 rounded-lg bg-primary/20 border border-primary/50">
+            <BookOpen className="h-5 w-5 text-primary-soft" />
           </div>
           <div className="min-w-0">
             <h2 className="font-semibold text-foreground">{title}</h2>
@@ -87,7 +87,7 @@ export function VideoSidebar({
             isSearch ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-4">
                 <div className="p-3 rounded-full bg-primary/10">
-                  <SearchX className="h-6 w-6 text-primary" />
+                  <SearchX className="h-6 w-6 text-primary-soft" />
                 </div>
                 <p className="text-sm font-medium text-foreground">No videos found</p>
                 <p className="text-xs text-muted-foreground">
@@ -111,19 +111,19 @@ export function VideoSidebar({
                   onClick={() => onSelectVideo(video)}
                   className={`w-full text-left p-3 rounded-xl border transition-all duration-300 group
                     ${isSelected
-                      ? 'bg-primary/10 border-primary shadow-lg shadow-primary/20 animate-glow'
-                      : 'bg-card/80 border-border hover:border-primary/50 hover:bg-secondary/50 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10'
+                      ? 'bg-primary/15 border-primary shadow-card'
+                      : 'card-interactive bg-card/80 border-border hover:bg-secondary/60 hover:-translate-y-1 active:translate-y-0'
                     }
-                    glassmorphism
+                    surface
                   `}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`shrink-0 p-2 rounded-lg transition-colors ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted group-hover:bg-primary/20'}`}>
+                    <div className={`shrink-0 p-2 rounded-lg transition-colors ${isSelected ? 'icon-gradient' : 'bg-muted group-hover:bg-primary/25 group-hover:text-primary-soft'}`}>
                       <Play className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap gap-1.5 mb-2">
-                        <Badge variant="secondary" className="text-xs bg-primary/20 text-primary border-0">
+                        <Badge variant="secondary" className="text-xs bg-primary/20 text-primary-soft border-0">
                           {video.subject}
                         </Badge>
                         {video.chapter && (
