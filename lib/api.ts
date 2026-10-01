@@ -1,6 +1,5 @@
 import type {
   AttentionCheck,
-  DailyStudyMinutes,
   StudySessionPayload,
   SubjectFilter,
   TodayStudyStats,
@@ -127,8 +126,4 @@ export async function saveStudySession(payload: StudySessionPayload, signal?: Ab
 
 export async function fetchTodayStudyStats(userId: number, signal?: AbortSignal): Promise<TodayStudyStats> {
   return getJson<TodayStudyStats>(`${STUDYLOG_PATH}/today/${userId}`, signal)
-}
-
-export async function fetchWeekStudyMinutes(userId: number, signal?: AbortSignal): Promise<DailyStudyMinutes[]> {
-  return getJson<DailyStudyMinutes[]>(`${STUDYLOG_PATH}/week/${userId}`, signal)
 }

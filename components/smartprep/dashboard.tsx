@@ -7,8 +7,7 @@ import { VideoSidebar } from "./video-sidebar"
 import { YouTubePlayer } from "./youtube-player"
 import { CountdownTimer } from "./countdown-timer"
 import { AttentionPopup } from "./attention-popup"
-import { PomodoroTimer } from "./pomodoro-timer"
-import { Toaster } from "@/components/ui/sonner"
+import { QuickLinks } from "./quick-links"
 import { ApiError, fetchAttentionCheck, fetchRecommendations, searchVideos } from "@/lib/api"
 import type { VideoRecommendation, AttentionCheck, VideoSearchParams, SubjectFilter } from "@/lib/types"
 
@@ -217,12 +216,7 @@ export function Dashboard() {
             isPaused={showAttentionPopup}
             muted={isAutoMuted}
           />
-          <PomodoroTimer
-            className="mt-4"
-            userId={USER_ID}
-            subject={selectedVideo?.subject}
-            chapter={selectedVideo?.chapter}
-          />
+          <QuickLinks className="mt-4" />
         </section>
 
         {isSearchMode ? (
@@ -264,8 +258,6 @@ export function Dashboard() {
         onAnswer={handleAnswer}
         onContinue={handleContinue}
       />
-
-      <Toaster theme="dark" position="top-center" richColors closeButton />
     </div>
   )
 }
