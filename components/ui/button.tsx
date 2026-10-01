@@ -51,6 +51,8 @@ function Button({
   return (
     <Comp
       data-slot="button"
+      // Autofill and password-manager extensions (e.g. Edge's fdprocessedid) add attributes before hydration
+      suppressHydrationWarning
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />

@@ -40,8 +40,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
-      <body className="font-sans antialiased min-h-screen bg-background text-foreground">
+    // suppressHydrationWarning: browser extensions (Grammarly, ColorZilla, ...) add attributes to <html>/<body> before React loads
+    <html lang="en" className="bg-background" suppressHydrationWarning>
+      <body className="font-sans antialiased min-h-screen bg-background text-foreground" suppressHydrationWarning>
         <AuthGuard>{children}</AuthGuard>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
