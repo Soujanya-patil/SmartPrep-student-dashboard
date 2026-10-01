@@ -68,7 +68,7 @@ type SubmitStatus = "idle" | "saving" | "saved" | "error"
 // ---------- constants ----------
 
 const USER_ID = 1
-const QUIZ_LENGTH = 5
+const QUIZ_LENGTH = 10
 const SECONDS_PER_QUESTION = 30
 const PASS_PERCENT = 60
 const CONFETTI_PERCENT = 80
