@@ -4,15 +4,8 @@ import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } f
 import { Search, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { suggestTopics } from "@/lib/api"
-import { SUBJECT_FILTERS, type SubjectFilter } from "@/lib/types"
+import type { SubjectFilter } from "@/lib/types"
 import { TopicSuggestions, suggestionOptionId } from "./topic-suggestions"
 
 interface SearchBarProps {
@@ -23,9 +16,8 @@ interface SearchBarProps {
 
 const MIN_SUGGEST_LENGTH = 2
 
-function isSubjectFilter(value: string): value is SubjectFilter {
-  return (SUBJECT_FILTERS as readonly string[]).includes(value)
-}
+// There is no subject picker: every search covers all subjects
+const subject: SubjectFilter = "All"
 
 export function SearchBar({
   onSearch,
@@ -33,7 +25,6 @@ export function SearchBar({
   suggestDebounceMs = 300,
 }: SearchBarProps) {
   const [query, setQuery] = useState("")
-  const [subject, setSubject] = useState<SubjectFilter>("All")
 
   // Autocomplete state
   const [suggestions, setSuggestions] = useState<string[]>([])
@@ -52,13 +43,10 @@ export function SearchBar({
 
   // Skip repeat searches for the same query + subject (each one costs YouTube quota)
   const lastSearchRef = useRef<string | null>(null)
-  // The query that was last actually searched, so a subject change can re-run it
-  const committedQueryRef = useRef("")
   const runSearch = useCallback((q: string, s: SubjectFilter, force = false) => {
     const key = `${q}|${s}`
     if (!force && key === lastSearchRef.current) return
     lastSearchRef.current = key
-    committedQueryRef.current = q
     onSearchRef.current(q, s)
   }, [])
 
@@ -66,7 +54,7 @@ export function SearchBar({
   // Emptying the box goes straight back to recommendations (no API call).
   useEffect(() => {
     if (query.trim() === "") runSearch("", subject)
-  }, [query, subject, runSearch])
+  }, [query, runSearch])
 
   // Debounced suggestions; each new keystroke aborts the previous request
   useEffect(() => {
@@ -106,7 +94,7 @@ export function SearchBar({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [query, subject, suggestDebounceMs])
+  }, [query, suggestDebounceMs])
 
   // Close the dropdown on any click outside the search bar
   useEffect(() => {
@@ -183,7 +171,7 @@ export function SearchBar({
     <div
       ref={containerRef}
       // z-30 lifts the dropdown above the player/sidebar (timer bar is z-40, popup z-50)
-      className="surface relative z-30 flex flex-col sm:flex-row gap-2 p-2 rounded-xl border border-primary/30 shadow-card transition-[border-color,box-shadow] focus-within:border-info/50"
+      className="surface relative z-30 flex p-2 rounded-xl border border-primary/30 shadow-card transition-[border-color,box-shadow] focus-within:border-info/50"
     >
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-soft pointer-events-none" />
@@ -232,30 +220,6 @@ export function SearchBar({
           />
         )}
       </div>
-
-      <Select
-        value={subject}
-        onValueChange={(value) => {
-          if (!isSubjectFilter(value)) return
-          setSubject(value)
-          // Changing the subject re-runs the current search, if there is one
-          if (committedQueryRef.current) runSearch(committedQueryRef.current, value)
-        }}
-      >
-        <SelectTrigger
-          aria-label="Filter by subject"
-          className="w-full sm:w-44 h-10 bg-background/40 border-border hover:border-primary/50 focus-visible:border-info focus-visible:ring-info/30"
-        >
-          <SelectValue>{subject === "All" ? "All subjects" : subject}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {SUBJECT_FILTERS.map((option) => (
-            <SelectItem key={option} value={option}>
-              {option === "All" ? "All subjects" : option}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
     </div>
   )
 }
