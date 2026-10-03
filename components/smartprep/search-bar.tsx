@@ -18,7 +18,6 @@ import { TopicSuggestions, suggestionOptionId } from "./topic-suggestions"
 interface SearchBarProps {
   onSearch: (query: string, subject: SubjectFilter) => void
   isSearching: boolean
-  debounceMs?: number
   suggestDebounceMs?: number
 }
 
@@ -31,7 +30,6 @@ function isSubjectFilter(value: string): value is SubjectFilter {
 export function SearchBar({
   onSearch,
   isSearching,
-  debounceMs = 400,
   suggestDebounceMs = 300,
 }: SearchBarProps) {
   const [query, setQuery] = useState("")
@@ -46,7 +44,7 @@ export function SearchBar({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const listId = useId()
 
-  // Keep the latest callback without restarting the debounce timer when it changes
+  // Keep the latest callback so runSearch can stay stable
   const onSearchRef = useRef(onSearch)
   useEffect(() => {
     onSearchRef.current = onSearch
@@ -54,18 +52,21 @@ export function SearchBar({
 
   // Skip repeat searches for the same query + subject (each one costs YouTube quota)
   const lastSearchRef = useRef<string | null>(null)
+  // The query that was last actually searched, so a subject change can re-run it
+  const committedQueryRef = useRef("")
   const runSearch = useCallback((q: string, s: SubjectFilter, force = false) => {
     const key = `${q}|${s}`
     if (!force && key === lastSearchRef.current) return
     lastSearchRef.current = key
+    committedQueryRef.current = q
     onSearchRef.current(q, s)
   }, [])
 
-  // Debounced search: only search once typing pauses
+  // Typing only fetches suggestions; YouTube is searched on Enter or when a suggestion is picked.
+  // Emptying the box goes straight back to recommendations (no API call).
   useEffect(() => {
-    const timer = setTimeout(() => runSearch(query.trim(), subject), debounceMs)
-    return () => clearTimeout(timer)
-  }, [query, subject, debounceMs, runSearch])
+    if (query.trim() === "") runSearch("", subject)
+  }, [query, subject, runSearch])
 
   // Debounced suggestions; each new keystroke aborts the previous request
   useEffect(() => {
@@ -160,7 +161,6 @@ export function SearchBar({
         if (isSuggestOpen && activeIndex >= 0 && activeIndex < suggestions.length) {
           selectSuggestion(suggestions[activeIndex])
         } else {
-          // Search right away instead of waiting for the debounce
           closeSuggestions()
           runSearch(query.trim(), subject, true)
         }
@@ -195,7 +195,7 @@ export function SearchBar({
           onFocus={() => {
             if (suggestions.length > 0 && query.trim().length >= MIN_SUGGEST_LENGTH) setIsSuggestOpen(true)
           }}
-          placeholder="Search any topic..."
+          placeholder="Search any topic, then press Enter"
           aria-label="Search any topic"
           role="combobox"
           aria-autocomplete="list"
@@ -236,7 +236,10 @@ export function SearchBar({
       <Select
         value={subject}
         onValueChange={(value) => {
-          if (isSubjectFilter(value)) setSubject(value)
+          if (!isSubjectFilter(value)) return
+          setSubject(value)
+          // Changing the subject re-runs the current search, if there is one
+          if (committedQueryRef.current) runSearch(committedQueryRef.current, value)
         }}
       >
         <SelectTrigger

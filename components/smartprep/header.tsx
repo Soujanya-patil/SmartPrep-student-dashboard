@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BarChart3, Brain, GraduationCap, LayoutDashboard, Mic, Sparkles, Timer, type LucideIcon } from "lucide-react"
+import { BarChart3, Brain, Flame, GraduationCap, LayoutDashboard, Mic, Sparkles, Timer, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; icon: LucideIcon }> = [
@@ -10,6 +10,7 @@ const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; icon: LucideIcon }
   { href: "/quiz", label: "Quiz", icon: Brain },
   { href: "/timer", label: "Timer", icon: Timer },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/streak", label: "Streak", icon: Flame },
   { href: "/interview", label: "Interview", icon: Mic },
 ]
 

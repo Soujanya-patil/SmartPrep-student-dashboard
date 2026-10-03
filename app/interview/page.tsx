@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 
 const API_BASE_URL = "http://localhost:8081/api"
 
@@ -178,6 +179,9 @@ export default function InterviewPage() {
     return (
       <div className="min-h-screen bg-[#0f0f1a] flex items-center justify-center p-6">
         <div className="w-full max-w-lg">
+          <Link href="/" className="text-purple-400 text-sm hover:text-purple-300 mb-6 inline-block">
+            ← Back to Dashboard
+          </Link>
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">🎤</span>
@@ -237,6 +241,9 @@ export default function InterviewPage() {
     return (
       <div className="min-h-screen bg-[#0f0f1a] p-6">
         <div className="max-w-3xl mx-auto">
+          <Link href="/" className="text-purple-400 text-sm hover:text-purple-300 mb-6 inline-block">
+            ← Back to Dashboard
+          </Link>
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -363,6 +370,9 @@ export default function InterviewPage() {
     return (
       <div className="min-h-screen bg-[#0f0f1a] p-6">
         <div className="max-w-2xl mx-auto">
+          <Link href="/" className="text-purple-400 text-sm hover:text-purple-300 mb-6 inline-block">
+            ← Back to Dashboard
+          </Link>
           <div className="text-center mb-8">
             <div className="text-6xl mb-4">{report.hired ? "🎉" : "💪"}</div>
             <h1 className="text-3xl font-bold text-white mb-2">
