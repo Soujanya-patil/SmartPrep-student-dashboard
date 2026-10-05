@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useCurrentUserId } from "@/hooks/use-current-user"
 import { API_BASE_URL } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -28,7 +29,6 @@ type Loadable<T> = { status: "loading" } | { status: "error" } | { status: "read
 
 // ---------- constants ----------
 
-const USER_ID = 1
 const CALENDAR_DAYS = 30
 const WEEKLY_GOAL_DAYS = 5
 const WEEKDAY_LABELS = ["Mon", "", "Wed", "", "Fri", "", "Sun"] as const
@@ -144,25 +144,27 @@ async function getJson<T>(path: string): Promise<T> {
 // ---------- page ----------
 
 export default function StreakPage() {
+  const userId = useCurrentUserId()
   const [logs, setLogs] = useState<Loadable<StudyLogRow[]>>({ status: "loading" })
   const [motivation, setMotivation] = useState<Loadable<string>>({ status: "loading" })
 
   const load = useCallback(() => {
+    if (userId === null) return
     setLogs({ status: "loading" })
     setMotivation({ status: "loading" })
 
-    getJson<StudyLogRow[]>(`/study/logs/${USER_ID}`)
+    getJson<StudyLogRow[]>(`/study/logs/${userId}`)
       .then((data) => setLogs({ status: "ready", data: Array.isArray(data) ? data : [] }))
       .catch(() => setLogs({ status: "error" }))
 
     // The dashboard endpoint asks the AI for a fresh message, so it can be slower; load it separately
-    getJson<DashboardData>(`/dashboard/${USER_ID}`)
+    getJson<DashboardData>(`/dashboard/${userId}`)
       .then((data) => {
         const message = data.motivationMessage?.trim()
         setMotivation(message ? { status: "ready", data: message } : { status: "error" })
       })
       .catch(() => setMotivation({ status: "error" }))
-  }, [])
+  }, [userId])
 
   useEffect(() => {
     load()

@@ -32,6 +32,7 @@ import {
 import { Header } from "@/components/smartprep/header"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useCurrentUserId } from "@/hooks/use-current-user"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { API_BASE_URL } from "@/lib/api"
 
@@ -67,7 +68,6 @@ type Loadable<T> = { status: "loading" } | { status: "error" } | { status: "read
 
 // ---------- chart constants ----------
 
-const USER_ID = 1
 const WEAK_THRESHOLD = 60
 
 // Mirrors the theme tokens in globals.css (Recharts needs concrete colors for SVG attributes)
@@ -270,6 +270,7 @@ function DataTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
 // ---------- page ----------
 
 export default function AnalyticsPage() {
+  const userId = useCurrentUserId()
   const [week, setWeek] = useState<Loadable<StudyDay[]>>({ status: "loading" })
   const [history, setHistory] = useState<Loadable<QuizAttempt[]>>({ status: "loading" })
   const [weakTopics, setWeakTopics] = useState<Loadable<WeakTopic[]>>({ status: "loading" })
@@ -278,23 +279,24 @@ export default function AnalyticsPage() {
 
   // Each request settles independently, so one failing endpoint never blanks the whole page
   const loadAll = useCallback(async () => {
+    if (userId === null) return
     setWeek({ status: "loading" })
     setHistory({ status: "loading" })
     setWeakTopics({ status: "loading" })
     setStreak({ status: "loading" })
 
     const [w, h, t, s] = await Promise.allSettled([
-      getJson<StudyDay[]>(`/study/week/${USER_ID}`),
-      getJson<QuizAttempt[]>(`/results/history/${USER_ID}`),
-      getJson<WeakTopic[]>(`/results/weak-topics/${USER_ID}`),
+      getJson<StudyDay[]>(`/study/week/${userId}`),
+      getJson<QuizAttempt[]>(`/results/history/${userId}`),
+      getJson<WeakTopic[]>(`/results/weak-topics/${userId}`),
       // /study/streak returns a sentence; /studylog/streak returns numbers
-      getJson<Streak>(`/studylog/streak/${USER_ID}`),
+      getJson<Streak>(`/studylog/streak/${userId}`),
     ])
     setWeek(settle(w))
     setHistory(settle(h))
     setWeakTopics(settle(t))
     setStreak(settle(s))
-  }, [])
+  }, [userId])
 
   useEffect(() => {
     void loadAll()

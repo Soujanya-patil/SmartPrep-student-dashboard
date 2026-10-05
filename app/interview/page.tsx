@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-
-const API_BASE_URL = "http://localhost:8081/api"
+import { API_BASE_URL } from "@/lib/api"
 
 interface Question {
   questionNumber: number

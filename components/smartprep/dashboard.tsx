@@ -8,10 +8,10 @@ import { YouTubePlayer } from "./youtube-player"
 import { CountdownTimer } from "./countdown-timer"
 import { AttentionPopup } from "./attention-popup"
 import { QuickLinks } from "./quick-links"
+import { useCurrentUserId } from "@/hooks/use-current-user"
 import { ApiError, fetchAttentionCheck, fetchRecommendations, searchVideos } from "@/lib/api"
 import type { VideoRecommendation, AttentionCheck, VideoSearchParams, SubjectFilter } from "@/lib/types"
 
-const USER_ID = 1
 const CHECK_INTERVAL = 15 * 60 // 15 minutes in seconds
 const MIN_QUERY_LENGTH = 2
 // Desktop: fixed-width right column that scrolls on its own; height leaves room for header, search bar and the fixed timer
@@ -22,6 +22,8 @@ function errorMessage(err: unknown, fallback: string): string {
 }
 
 export function Dashboard() {
+  const userId = useCurrentUserId()
+
   // Recommended videos state
   const [recommended, setRecommended] = useState<VideoRecommendation[]>([])
   const [isLoadingRecommended, setIsLoadingRecommended] = useState(true)
@@ -63,8 +65,10 @@ export function Dashboard() {
     playerRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" })
   }, [])
 
-  // Load video recommendations
+  // Load video recommendations once the logged-in user's id is known
   useEffect(() => {
+    if (userId === null) return
+    const id = userId
     const controller = new AbortController()
 
     async function loadRecommendations() {
@@ -72,7 +76,7 @@ export function Dashboard() {
       setRecommendedError(null)
 
       try {
-        const list = await fetchRecommendations(USER_ID, controller.signal)
+        const list = await fetchRecommendations(id, controller.signal)
         setRecommended(list)
         // Auto-play the first recommendation
         if (list.length > 0) {
@@ -90,7 +94,7 @@ export function Dashboard() {
 
     loadRecommendations()
     return () => controller.abort()
-  }, [])
+  }, [userId])
 
   // Search (called by SearchBar after its 400ms debounce)
   const handleSearch = useCallback(async (query: string, subject: SubjectFilter) => {

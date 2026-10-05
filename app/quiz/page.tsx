@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useCurrentUserId } from "@/hooks/use-current-user"
 import { API_BASE_URL, suggestTopics } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -67,7 +68,6 @@ type SubmitStatus = "idle" | "saving" | "saved" | "error"
 
 // ---------- constants ----------
 
-const USER_ID = 1
 const QUIZ_LENGTH = 10
 const SECONDS_PER_QUESTION = 30
 const PASS_PERCENT = 60
@@ -218,9 +218,15 @@ async function fetchQuiz(subject: Subject, chapter: string, signal: AbortSignal)
   return shuffle(questions).slice(0, QUIZ_LENGTH)
 }
 
-async function submitResult(subject: Subject, chapter: string, score: number, total: number): Promise<void> {
+async function submitResult(
+  userId: number,
+  subject: Subject,
+  chapter: string,
+  score: number,
+  total: number
+): Promise<void> {
   const params = new URLSearchParams({
-    userId: String(USER_ID),
+    userId: String(userId),
     subject,
     chapter,
     score: String(score),
@@ -297,6 +303,7 @@ function Confetti() {
 // ---------- page ----------
 
 export default function QuizPage() {
+  const userId = useCurrentUserId()
   const [stage, setStage] = useState<Stage>("setup")
 
   // Setup
@@ -502,20 +509,22 @@ export default function QuizPage() {
 
   // ----- auto-submit once per attempt -----
   const submit = useCallback(async () => {
+    if (userId === null) return
     setSubmitStatus("saving")
     try {
-      await submitResult(quizSubject, quizChapter, score, total)
+      await submitResult(userId, quizSubject, quizChapter, score, total)
       setSubmitStatus("saved")
     } catch {
       setSubmitStatus("error")
     }
-  }, [quizSubject, quizChapter, score, total])
+  }, [userId, quizSubject, quizChapter, score, total])
 
   useEffect(() => {
-    if (stage !== "results" || submittedAttemptRef.current === attempt) return
+    // Wait for the user's id so the result isn't marked as submitted before it's actually sent
+    if (stage !== "results" || userId === null || submittedAttemptRef.current === attempt) return
     submittedAttemptRef.current = attempt
     void submit()
-  }, [stage, attempt, submit])
+  }, [stage, userId, attempt, submit])
 
   // ----- setup keyboard for the chapter combobox -----
   const onChapterKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {

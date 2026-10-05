@@ -19,11 +19,23 @@ export const USER_ROLES: ReadonlyArray<{ value: UserRole; label: string }> = [
 ]
 
 export interface StoredUser {
-  // null when the backend's login reply carries no id (plain "Login successful! Welcome {name}" text)
-  userId: number | null
+  userId: number
   name: string
   email: string
 }
+
+/**
+ * What's in storage right now:
+ * - "loading": not known yet (server render / hydration)
+ * - "none": nobody logged in
+ * - "stale": something is stored but unusable, e.g. old sessions saved with `userId: null`
+ * - "valid": a logged-in user with a numeric id
+ */
+export type SessionState =
+  | { status: "loading" }
+  | { status: "none" }
+  | { status: "stale" }
+  | { status: "valid"; user: StoredUser }
 
 export interface RegisterPayload {
   name: string
@@ -34,14 +46,14 @@ export interface RegisterPayload {
 
 // ---------- storage (every access guarded: storage can be unavailable) ----------
 
+function isValidUserId(v: unknown): v is number {
+  return typeof v === "number" && Number.isInteger(v) && v > 0
+}
+
 function isStoredUser(v: unknown): v is StoredUser {
   if (typeof v !== "object" || v === null) return false
   const o = v as Record<string, unknown>
-  return (
-    (o.userId === null || typeof o.userId === "number") &&
-    typeof o.name === "string" &&
-    typeof o.email === "string"
-  )
+  return isValidUserId(o.userId) && typeof o.name === "string" && typeof o.email === "string"
 }
 
 function readRaw(): string | null {
@@ -62,8 +74,19 @@ function parseUser(raw: string | null): StoredUser | null {
   }
 }
 
+function toSession(raw: string | null): Exclude<SessionState, { status: "loading" }> {
+  if (!raw) return { status: "none" }
+  const user = parseUser(raw)
+  return user ? { status: "valid", user } : { status: "stale" }
+}
+
 export function getStoredUser(): StoredUser | null {
   return parseUser(readRaw())
+}
+
+/** The logged-in user's id, or null when nobody (or a stale session) is stored */
+export function getCurrentUserId(): number | null {
+  return getStoredUser()?.userId ?? null
 }
 
 export function saveUser(user: StoredUser): void {
@@ -96,14 +119,21 @@ function subscribe(onChange: () => void): () => void {
   }
 }
 
-/**
- * The logged-in user, kept in sync across tabs.
- * `undefined` = not known yet (server render / hydration), `null` = logged out.
- */
-export function useStoredUser(): StoredUser | null | undefined {
+/** The stored session, kept in sync across tabs. Use `useCurrentUser` in components, which also handles "stale". */
+export function useSession(): SessionState {
   // Snapshot is the raw string so React can compare it by value
   const raw = useSyncExternalStore<string | null | undefined>(subscribe, readRaw, () => undefined)
-  return useMemo(() => (raw === undefined ? undefined : parseUser(raw)), [raw])
+  return useMemo<SessionState>(() => (raw === undefined ? { status: "loading" } : toSession(raw)), [raw])
+}
+
+/**
+ * The logged-in user, kept in sync across tabs.
+ * `undefined` = not known yet (server render / hydration), `null` = logged out or stale.
+ */
+export function useStoredUser(): StoredUser | null | undefined {
+  const session = useSession()
+  if (session.status === "loading") return undefined
+  return session.status === "valid" ? session.user : null
 }
 
 export function isPublicPath(pathname: string): boolean {
@@ -124,7 +154,7 @@ async function postAuth(path: string, body: unknown): Promise<{ response: Respon
     throw new ApiError("Cannot reach the SmartPrep server. Is the backend running on port 8081?")
   }
 
-  // Login replies with plain text, register with JSON; errors may be either
+  // Login replies with JSON, register with plain text; errors may be either
   const text = await response.text().catch(() => "")
   let data: unknown = text
   try {
@@ -151,36 +181,22 @@ function errorMessage(data: unknown, fallback: string): string {
   return trimmed.length > 200 ? `${trimmed.slice(0, 200)}…` : trimmed
 }
 
-function toUserId(v: unknown): number | null {
-  if (typeof v === "number" && Number.isFinite(v)) return v
-  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v)
-  return null
-}
-
-const LOGIN_SUCCESS = /^login successful!?\s*(?:welcome\s*)?(.*)$/i
-
+/**
+ * Logs in. The backend replies { id, name, email, role } on success and 401 { message } on a wrong
+ * email or password; the message is thrown as an ApiError so the login form can show it.
+ */
 export async function loginUser(email: string, password: string): Promise<StoredUser> {
   const { response, data } = await postAuth("/users/login", { email, password })
   const fallback = response.status === 401 ? "Invalid email or password." : `Login failed (HTTP ${response.status}).`
   if (!response.ok) throw new ApiError(errorMessage(data, fallback), response.status)
 
-  // Current backend: "Login successful! Welcome {name}"; anything else in a 200 is its error text
-  if (typeof data === "string") {
-    const match = LOGIN_SUCCESS.exec(data.trim())
-    if (!match) throw new ApiError(errorMessage(data, "Invalid email or password."), response.status)
-    return { userId: null, name: match[1].trim() || email, email }
-  }
-
-  // Forward-compatible: a backend that returns the user object
   const record = asRecord(data)
-  if (record) {
-    const user = asRecord(record.user) ?? record
-    const name = typeof user.name === "string" && user.name.trim() ? user.name.trim() : email
-    const userEmail = typeof user.email === "string" && user.email ? user.email : email
-    return { userId: toUserId(user.userId ?? user.id), name, email: userEmail }
+  if (!record || !isValidUserId(record.id)) {
+    throw new ApiError("Unexpected response from the server. Please try again.", response.status)
   }
-
-  throw new ApiError("Unexpected response from the server.", response.status)
+  const name = typeof record.name === "string" && record.name.trim() ? record.name.trim() : email
+  const userEmail = typeof record.email === "string" && record.email ? record.email : email
+  return { userId: record.id, name, email: userEmail }
 }
 
 export async function registerUser(payload: RegisterPayload): Promise<void> {

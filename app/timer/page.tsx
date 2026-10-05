@@ -18,6 +18,7 @@ import { toast } from "sonner"
 import { Header } from "@/components/smartprep/header"
 import { Button } from "@/components/ui/button"
 import { Toaster } from "@/components/ui/sonner"
+import { useCurrentUserId } from "@/hooks/use-current-user"
 import { API_BASE_URL, fetchTodayStudyStats, saveStudySession } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -38,7 +39,6 @@ interface Stats {
   streak: number | null
 }
 
-const USER_ID = 1
 const MINUTE_MS = 60_000
 const DURATION_MS: Record<Mode, number> = { study: 25 * MINUTE_MS, break: 5 * MINUTE_MS }
 const STUDY_MINUTES = 25
@@ -193,6 +193,7 @@ function StatCard({
 // ---------- page ----------
 
 export default function TimerPage() {
+  const userId = useCurrentUserId()
   const [timer, setTimer] = useState<TimerState>(() => stoppedState("study"))
   const [now, setNow] = useState(0)
   const [hydrated, setHydrated] = useState(false)
@@ -217,10 +218,11 @@ export default function TimerPage() {
 
   // ----- stats (each call may fail on its own; none of them should break the page) -----
   const loadStats = useCallback(async () => {
+    if (userId === null) return
     const [today, hours, streak] = await Promise.allSettled([
-      fetchTodayStudyStats(USER_ID),
-      getJson<{ totalHours: number }>(`/study/today/${USER_ID}`),
-      getJson<{ currentStreak: number }>(`/studylog/streak/${USER_ID}`),
+      fetchTodayStudyStats(userId),
+      getJson<{ totalHours: number }>(`/study/today/${userId}`),
+      getJson<{ currentStreak: number }>(`/studylog/streak/${userId}`),
     ])
     setStats({
       sessionsToday: valueOrNull(today)?.sessionCount ?? null,
@@ -228,7 +230,7 @@ export default function TimerPage() {
       streak: valueOrNull(streak)?.currentStreak ?? null,
     })
     setStatsOffline([today, hours, streak].every((r) => r.status === "rejected"))
-  }, [])
+  }, [userId])
 
   useEffect(() => {
     void loadStats()
@@ -236,9 +238,10 @@ export default function TimerPage() {
 
   // ----- saving -----
   const saveSession = useCallback(async (): Promise<void> => {
+    if (userId === null) return
     try {
       await saveStudySession({
-        userId: USER_ID,
+        userId,
         subject: "Pomodoro Session",
         chapter: "",
         durationMinutes: STUDY_MINUTES,
@@ -252,7 +255,7 @@ export default function TimerPage() {
         action: { label: "Retry", onClick: () => void saveSession() },
       })
     }
-  }, [loadStats])
+  }, [userId, loadStats])
 
   // ----- completing a countdown -----
   const completeMode = (mode: Mode) => {

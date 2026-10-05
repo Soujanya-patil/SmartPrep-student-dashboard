@@ -1,20 +1,29 @@
 "use client"
 
-import { useEffect, type ReactNode } from "react"
+import { useEffect, useRef, type ReactNode } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { Spinner } from "@/components/ui/spinner"
-import { isPublicPath, useStoredUser } from "@/lib/auth"
+import { useCurrentUser } from "@/hooks/use-current-user"
+import { isPublicPath, useSession } from "@/lib/auth"
 
 // Client-side route protection: a server proxy/middleware can't read localStorage
 export function AuthGuard({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const user = useStoredUser()
   const isPublic = isPublicPath(pathname)
-  const mustLeave = !isPublic && user === null
+  const session = useSession()
+  // Clears a stale session (no numeric userId) and sends the browser to /login
+  const { user } = useCurrentUser()
+
+  // Once a stale session has been cleared, storage reads "none": keep heading to /login, not /landing
+  const wasStaleRef = useRef(false)
+  useEffect(() => {
+    if (session.status === "stale") wasStaleRef.current = true
+  }, [session.status])
+  const mustLeave = !isPublic && session.status === "none"
 
   useEffect(() => {
-    if (mustLeave) router.replace("/landing")
+    if (mustLeave) router.replace(wasStaleRef.current ? "/login" : "/landing")
   }, [mustLeave, router])
 
   if (isPublic) return <>{children}</>
@@ -24,7 +33,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center gap-3 text-muted-foreground">
         <Spinner className="size-5 text-primary-soft" />
-        <span className="text-sm">{user === null ? "Redirecting…" : "Loading…"}</span>
+        <span className="text-sm">{session.status === "loading" ? "Loading…" : "Redirecting…"}</span>
       </div>
     )
   }

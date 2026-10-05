@@ -21,12 +21,12 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Toaster } from "@/components/ui/sonner"
 import { Switch } from "@/components/ui/switch"
+import { useCurrentUserId } from "@/hooks/use-current-user"
 import { API_BASE_URL } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 // ---------- config ----------
 
-const USER_ID = 1
 const RECIPIENTS = [
   { role: "Parent", email: "dwd.shekhar@gmail.com" },
   { role: "Student", email: "soujanya.patil2003@gmail.com" },
@@ -162,10 +162,10 @@ async function getJson<T>(path: string): Promise<T> {
   return (await response.json()) as T
 }
 
-async function sendReport(): Promise<string> {
+async function sendReport(userId: number): Promise<string> {
   let response: Response
   try {
-    response = await fetch(`${API_BASE_URL}/report/send/${USER_ID}`, {
+    response = await fetch(`${API_BASE_URL}/report/send/${userId}`, {
       method: "POST",
       headers: { Accept: "application/json" },
     })
@@ -185,6 +185,7 @@ async function sendReport(): Promise<string> {
 // ---------- page ----------
 
 export default function ParentReportPage() {
+  const userId = useCurrentUserId()
   const [dashboard, setDashboard] = useState<Loadable<DashboardData>>({ status: "loading" })
   // Same streak the Streak page shows (/api/dashboard's own count ignores yesterday's grace day)
   const [streak, setStreak] = useState<number | null>(null)
@@ -196,14 +197,15 @@ export default function ParentReportPage() {
 
   // ----- data -----
   const loadPreview = useCallback(() => {
+    if (userId === null) return
     setDashboard({ status: "loading" })
-    getJson<DashboardData>(`/dashboard/${USER_ID}`)
+    getJson<DashboardData>(`/dashboard/${userId}`)
       .then((data) => setDashboard({ status: "ready", data }))
       .catch(() => setDashboard({ status: "error" }))
-    getJson<{ currentStreak: number }>(`/studylog/streak/${USER_ID}`)
+    getJson<{ currentStreak: number }>(`/studylog/streak/${userId}`)
       .then((data) => setStreak(data.currentStreak))
       .catch(() => setStreak(null))
-  }, [])
+  }, [userId])
 
   useEffect(() => {
     loadPreview()
@@ -226,9 +228,10 @@ export default function ParentReportPage() {
 
   // ----- sending -----
   const send = useCallback(async (trigger: SendRecord["trigger"]) => {
+    if (userId === null) return
     setSending(true)
     try {
-      await sendReport()
+      await sendReport(userId)
       setHistory((h) => [{ at: new Date().toISOString(), ok: true, trigger }, ...h].slice(0, HISTORY_LIMIT))
       toast.success(trigger === "auto" ? "✅ Weekly report sent to both emails!" : "✅ Report sent to both emails!")
     } catch (err) {
@@ -241,14 +244,14 @@ export default function ParentReportPage() {
     } finally {
       setSending(false)
     }
-  }, [])
+  }, [userId])
 
   // Weekly auto-send: runs once per page load, only when a Monday has passed since the last send
   useEffect(() => {
-    if (!hydrated || autoAttemptedRef.current) return
+    if (!hydrated || userId === null || autoAttemptedRef.current) return
     autoAttemptedRef.current = true
     if (isAutoSendDue(pref, history, new Date())) void send("auto")
-  }, [hydrated, pref, history, send])
+  }, [hydrated, userId, pref, history, send])
 
   const toggleAuto = (enabled: boolean) => {
     setPref({ enabled, enabledAt: enabled ? new Date().toISOString() : null })
