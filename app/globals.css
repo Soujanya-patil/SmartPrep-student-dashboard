@@ -417,3 +417,19 @@
     animation-iteration-count: 1 !important;
   }
 }
+html {
+  color-scheme: dark;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #f1f5ff !important;
+  caret-color: #f1f5ff !important;
+  -webkit-box-shadow: 0 0 0 1000px #0f1530 inset !important;
+  box-shadow: 0 0 0 1000px #0f1530 inset !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
