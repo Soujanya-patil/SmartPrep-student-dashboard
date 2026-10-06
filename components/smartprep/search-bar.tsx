@@ -12,6 +12,8 @@ interface SearchBarProps {
   onSearch: (query: string, subject: SubjectFilter) => void
   isSearching: boolean
   suggestDebounceMs?: number
+  /** The search that was active when the dashboard was last shown, so returning to it restores the box */
+  initialQuery?: string
 }
 
 const MIN_SUGGEST_LENGTH = 2
@@ -23,15 +25,17 @@ export function SearchBar({
   onSearch,
   isSearching,
   suggestDebounceMs = 300,
+  initialQuery = "",
 }: SearchBarProps) {
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(initialQuery)
 
   // Autocomplete state
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [isSuggestOpen, setIsSuggestOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
-  const skipNextSuggestRef = useRef(false)
+  // A restored query shouldn't pop the suggestions open on return
+  const skipNextSuggestRef = useRef(initialQuery.trim() !== "")
   const containerRef = useRef<HTMLDivElement | null>(null)
   const listId = useId()
 
@@ -42,7 +46,8 @@ export function SearchBar({
   }, [onSearch])
 
   // Skip repeat searches for the same query + subject (each one costs YouTube quota)
-  const lastSearchRef = useRef<string | null>(null)
+  // Seeded with the restored search so it isn't sent again
+  const lastSearchRef = useRef<string | null>(initialQuery.trim() ? `${initialQuery.trim()}|${subject}` : null)
   const runSearch = useCallback((q: string, s: SubjectFilter, force = false) => {
     const key = `${q}|${s}`
     if (!force && key === lastSearchRef.current) return

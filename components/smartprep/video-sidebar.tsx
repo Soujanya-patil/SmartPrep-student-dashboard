@@ -1,9 +1,10 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Play, Youtube, AlertCircle, BookOpen, SearchX } from "lucide-react"
+import { Play, Youtube, AlertCircle, BookOpen, SearchX, RefreshCw, Loader2 } from "lucide-react"
 import { cn, decodeHtml } from "@/lib/utils"
 import type { VideoRecommendation } from "@/lib/types"
 
@@ -17,6 +18,10 @@ interface VideoSidebarProps {
   title?: string
   subtitle?: string
   className?: string
+  /** Shown above the skeletons when loading is taking a while (e.g. the backend is waking up) */
+  slowMessage?: string
+  /** Adds a Retry button to the error state */
+  onRetry?: () => void
 }
 
 function VideoCardSkeleton() {
@@ -47,7 +52,9 @@ export function VideoSidebar({
   variant = "recommended",
   title = "Recommended Videos",
   subtitle = "AI-powered suggestions for you",
-  className
+  className,
+  slowMessage,
+  onRetry
 }: VideoSidebarProps) {
   const isSearch = variant === "search"
 
@@ -75,13 +82,27 @@ export function VideoSidebar({
       <ScrollArea className="lg:flex-1 lg:min-h-0" id="video-list">
         <div className="p-3 space-y-3" aria-busy={isLoading}>
           {isLoading ? (
-            Array.from({ length: 5 }, (_, i) => <VideoCardSkeleton key={i} />)
+            <>
+              {slowMessage && (
+                <p role="status" className="flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-foreground">
+                  <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-primary-soft" />
+                  {slowMessage}
+                </p>
+              )}
+              {Array.from({ length: 5 }, (_, i) => <VideoCardSkeleton key={i} />)}
+            </>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-4">
+            <div role="alert" className="flex flex-col items-center justify-center py-12 gap-3 text-center px-4">
               <div className="p-3 rounded-full bg-destructive/10">
                 <AlertCircle className="h-6 w-6 text-destructive" />
               </div>
               <p className="text-sm text-muted-foreground">{error}</p>
+              {onRetry && (
+                <Button variant="outline" size="sm" onClick={onRetry}>
+                  <RefreshCw className="h-4 w-4" />
+                  Retry
+                </Button>
+              )}
             </div>
           ) : videos.length === 0 ? (
             isSearch ? (

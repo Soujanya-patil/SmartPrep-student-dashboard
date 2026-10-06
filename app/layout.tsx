@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthGuard } from '@/components/smartprep/auth-guard'
+import { DashboardStoreProvider } from '@/components/smartprep/dashboard-store'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -43,7 +44,10 @@ export default function RootLayout({
     // suppressHydrationWarning: browser extensions (Grammarly, ColorZilla, ...) add attributes to <html>/<body> before React loads
     <html lang="en" className="bg-background" suppressHydrationWarning>
       <body className="font-sans antialiased min-h-screen bg-background text-foreground" suppressHydrationWarning>
-        <AuthGuard>{children}</AuthGuard>
+        {/* Outside the guard so dashboard state (videos, search, timer) survives navigation */}
+        <DashboardStoreProvider>
+          <AuthGuard>{children}</AuthGuard>
+        </DashboardStoreProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

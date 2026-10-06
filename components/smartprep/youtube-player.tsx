@@ -9,6 +9,8 @@ interface YouTubePlayerProps {
   video: VideoRecommendation | null
   isPaused: boolean
   muted?: boolean
+  /** Replaces "Select a video to start" while there is no video yet (e.g. still loading) */
+  emptyText?: string
 }
 
 // Extract the 11-char video ID from watch?v=, youtu.be/, /embed/ or /shorts/ URLs
@@ -18,7 +20,7 @@ export function getYouTubeId(url: string | undefined | null): string | null {
   return match ? match[1] : null
 }
 
-export function YouTubePlayer({ video, isPaused, muted = false }: YouTubePlayerProps) {
+export function YouTubePlayer({ video, isPaused, muted = false, emptyText }: YouTubePlayerProps) {
   const videoId = getYouTubeId(video?.youtubeUrl)
 
   return (
@@ -40,7 +42,7 @@ export function YouTubePlayer({ video, isPaused, muted = false }: YouTubePlayerP
             <div className="p-4 rounded-full bg-primary/20 border border-primary/40">
               <Play className="h-8 w-8 text-primary-soft" />
             </div>
-            <p className="text-base sm:text-lg text-foreground">Select a video to start</p>
+            <p className="text-base sm:text-lg text-foreground" role="status">{emptyText ?? "Select a video to start"}</p>
           </div>
         )}
       </div>

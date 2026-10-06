@@ -8,42 +8,32 @@ import { YouTubePlayer } from "./youtube-player"
 import { CountdownTimer } from "./countdown-timer"
 import { AttentionPopup } from "./attention-popup"
 import { QuickLinks } from "./quick-links"
-import { useCurrentUserId } from "@/hooks/use-current-user"
-import { ApiError, fetchAttentionCheck, fetchRecommendations, searchVideos } from "@/lib/api"
-import type { VideoRecommendation, AttentionCheck, VideoSearchParams, SubjectFilter } from "@/lib/types"
+import { CHECK_INTERVAL, useDashboardField, useDashboardStore, useIsSlow } from "./dashboard-store"
+import { fetchAttentionCheck } from "@/lib/api"
+import type { VideoRecommendation, AttentionCheck } from "@/lib/types"
 
-const CHECK_INTERVAL = 15 * 60 // 15 minutes in seconds
-const MIN_QUERY_LENGTH = 2
 // Desktop: fixed-width right column that scrolls on its own; height leaves room for header, search bar and the fixed timer
 const SIDEBAR_CLASSES = "lg:w-96 lg:shrink-0 lg:sticky lg:top-4 lg:h-[calc(100dvh-15.5rem)]"
 
-function errorMessage(err: unknown, fallback: string): string {
-  return err instanceof ApiError ? `${fallback} ${err.message}` : fallback
-}
+const WAKING_UP = "Waking up the server, this can take up to 2 minutes…"
 
 export function Dashboard() {
-  const userId = useCurrentUserId()
-
-  // Recommended videos state
-  const [recommended, setRecommended] = useState<VideoRecommendation[]>([])
-  const [isLoadingRecommended, setIsLoadingRecommended] = useState(true)
-  const [recommendedError, setRecommendedError] = useState<string | null>(null)
-
-  // Search state (activeSearch === null means the sidebar shows recommendations)
-  const [activeSearch, setActiveSearch] = useState<VideoSearchParams | null>(null)
-  const [searchResults, setSearchResults] = useState<VideoRecommendation[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [searchError, setSearchError] = useState<string | null>(null)
-  const searchAbortRef = useRef<AbortController | null>(null)
+  // Videos, search, the selected video and the timer live in a store in the root layout, so they
+  // survive a visit to another page. Recommendations and search are fetched by the store.
+  const { data, retryRecommendations, search: handleSearch } = useDashboardStore()
+  const { recommended, recommendedStatus, recommendedError, recommendedSince } = data
+  const { activeSearch, searchResults, isSearching, searchError, searchSince } = data
+  const isLoadingRecommended = recommendedStatus === "idle" || recommendedStatus === "loading"
+  const recommendedSlow = useIsSlow(recommendedSince)
+  const searchSlow = useIsSlow(searchSince)
 
   // Player state
-  const [selectedVideo, setSelectedVideo] = useState<VideoRecommendation | null>(null)
-  // Browsers block autoplay with sound until the user interacts, so the first auto-play is muted
-  const [isAutoMuted, setIsAutoMuted] = useState(true)
+  const [selectedVideo, setSelectedVideo] = useDashboardField("selectedVideo")
+  const [isAutoMuted, setIsAutoMuted] = useDashboardField("isAutoMuted")
 
-  // Timer state
-  const [timeRemaining, setTimeRemaining] = useState(CHECK_INTERVAL)
-  const [isTimerActive, setIsTimerActive] = useState(false)
+  // Timer state: the countdown only runs while this page is mounted, so it pauses while the user is away
+  const [timeRemaining, setTimeRemaining] = useDashboardField("timeRemaining")
+  const [isTimerActive, setIsTimerActive] = useDashboardField("isTimerActive")
 
   // Attention check state
   const [showAttentionPopup, setShowAttentionPopup] = useState(false)
@@ -63,74 +53,7 @@ export function Dashboard() {
     // Bring the player into view (the list sits below it on mobile/tablet)
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     playerRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" })
-  }, [])
-
-  // Load video recommendations once the logged-in user's id is known
-  useEffect(() => {
-    if (userId === null) return
-    const id = userId
-    const controller = new AbortController()
-
-    async function loadRecommendations() {
-      setIsLoadingRecommended(true)
-      setRecommendedError(null)
-
-      try {
-        const list = await fetchRecommendations(id, controller.signal)
-        setRecommended(list)
-        // Auto-play the first recommendation
-        if (list.length > 0) {
-          setSelectedVideo((current) => current ?? list[0])
-          setIsTimerActive(true)
-        }
-      } catch (err) {
-        if (controller.signal.aborted) return
-        console.error(err)
-        setRecommendedError(errorMessage(err, "Unable to load video recommendations."))
-      } finally {
-        if (!controller.signal.aborted) setIsLoadingRecommended(false)
-      }
-    }
-
-    loadRecommendations()
-    return () => controller.abort()
-  }, [userId])
-
-  // Search (called by SearchBar after its 400ms debounce)
-  const handleSearch = useCallback(async (query: string, subject: SubjectFilter) => {
-    searchAbortRef.current?.abort()
-
-    // Cleared or too short: fall back to recommendations
-    if (query.length < MIN_QUERY_LENGTH) {
-      searchAbortRef.current = null
-      setActiveSearch(null)
-      setSearchResults([])
-      setSearchError(null)
-      setIsSearching(false)
-      return
-    }
-
-    const controller = new AbortController()
-    searchAbortRef.current = controller
-    setActiveSearch({ query, subject })
-    setIsSearching(true)
-    setSearchError(null)
-
-    try {
-      const results = await searchVideos({ query, subject }, controller.signal)
-      setSearchResults(results)
-    } catch (err) {
-      if (controller.signal.aborted) return
-      console.error(err)
-      setSearchResults([])
-      setSearchError(errorMessage(err, "Search failed."))
-    } finally {
-      if (searchAbortRef.current === controller) setIsSearching(false)
-    }
-  }, [])
-
-  // Cancel any in-flight search on unmount
-  useEffect(() => () => searchAbortRef.current?.abort(), [])
+  }, [setIsAutoMuted, setSelectedVideo, setTimeRemaining, setIsTimerActive])
 
   // Trigger attention check
   const triggerAttentionCheck = useCallback(async () => {
@@ -176,7 +99,7 @@ export function Dashboard() {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [isTimerActive, showAttentionPopup, triggerAttentionCheck])
+  }, [isTimerActive, showAttentionPopup, triggerAttentionCheck, setTimeRemaining])
 
   // Handle attention check answer
   const handleAnswer = () => {
@@ -204,7 +127,7 @@ export function Dashboard() {
 
       <div className="border-b border-border bg-card/30 px-4 py-3">
         <div className="max-w-screen-2xl mx-auto">
-          <SearchBar onSearch={handleSearch} isSearching={isSearching} />
+          <SearchBar onSearch={handleSearch} isSearching={isSearching} initialQuery={activeSearch?.query ?? ""} />
         </div>
       </div>
 
@@ -219,6 +142,15 @@ export function Dashboard() {
             video={selectedVideo}
             isPaused={showAttentionPopup}
             muted={isAutoMuted}
+            emptyText={
+              isLoadingRecommended
+                ? recommendedSlow
+                  ? WAKING_UP
+                  : "Loading your recommended videos…"
+                : recommendedStatus === "error"
+                  ? "Couldn't load your videos. Use Retry in the list."
+                  : undefined
+            }
           />
           <QuickLinks className="mt-4" />
         </section>
@@ -233,6 +165,8 @@ export function Dashboard() {
             onSelectVideo={handleSelectVideo}
             isLoading={isSearching}
             error={searchError}
+            slowMessage={searchSlow ? WAKING_UP : undefined}
+            onRetry={activeSearch ? () => handleSearch(activeSearch.query, activeSearch.subject) : undefined}
             className={SIDEBAR_CLASSES}
           />
         ) : (
@@ -243,6 +177,8 @@ export function Dashboard() {
             onSelectVideo={handleSelectVideo}
             isLoading={isLoadingRecommended}
             error={recommendedError}
+            slowMessage={recommendedSlow ? WAKING_UP : undefined}
+            onRetry={retryRecommendations}
             className={SIDEBAR_CLASSES}
           />
         )}
