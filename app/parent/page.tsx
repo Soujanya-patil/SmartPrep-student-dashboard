@@ -162,6 +162,9 @@ async function getJson<T>(path: string): Promise<T> {
   return (await response.json()) as T
 }
 
+const REPORT_UNAVAILABLE = "The report couldn't be sent right now. Please try again later."
+const SERVER_ERROR_STATUSES: ReadonlyArray<number> = [500, 502, 503, 504]
+
 async function sendReport(userId: number): Promise<string> {
   let response: Response
   try {
@@ -170,10 +173,12 @@ async function sendReport(userId: number): Promise<string> {
       headers: { Accept: "application/json" },
     })
   } catch {
-    throw new Error("Can't reach the SmartPrep server. Is the backend running on port 8081?")
+    throw new Error(REPORT_UNAVAILABLE)
   }
-  if (response.status === 404) throw new Error("The report service isn't set up on the backend yet (HTTP 404).")
-  if (!response.ok) throw new Error(`The server couldn't send the report (HTTP ${response.status}).`)
+  // The backend answers 404 when the user doesn't exist (e.g. a deleted account), not when the route is missing
+  if (response.status === 404) throw new Error("We couldn't find your account. Please log out and log in again.")
+  if (SERVER_ERROR_STATUSES.includes(response.status)) throw new Error(REPORT_UNAVAILABLE)
+  if (!response.ok) throw new Error(`Something went wrong (HTTP ${response.status}).`)
   try {
     const body = (await response.json()) as { message?: unknown }
     return typeof body.message === "string" ? body.message : "Report sent successfully!"
