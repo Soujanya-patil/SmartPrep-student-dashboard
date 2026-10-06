@@ -17,8 +17,8 @@
   --border: #292d49;
 
   /* Text */
-  --foreground: #f5f7ff; /* primary text */
-  --muted-foreground: #a8adc2; /* secondary text, helper copy (AA on every surface) */
+  --foreground: #c6cdea; /* primary text */
+  --muted-foreground: #a5aac2; /* secondary text, helper copy (AA on every surface) */
   --faint-foreground: #6f758d; /* decorative only: icons, dividers, disabled (below 4.5:1, never for body copy) */
 
   /* Accents */
@@ -26,10 +26,10 @@
   --primary-soft: #a497ff; /* violet for text: #7c6cff is too dark for small text on cards */
   --info: #38d9ff; /* secondary accent (cyan) */
   --success: #2dd4a8;
-  --warning: #f5c451;
-  --destructive: #ff647c;
+  --warning: #f0c769;
+  --destructive: #fc7488;
   /* Every accent is bright, so text placed on an accent fill is dark */
-  --on-accent: #0b0c14;
+  --on-accent: #2b2e42;
 
   /* The one gradient, used sparingly: primary CTA, progress, active highlights */
   --gradient-accent: linear-gradient(135deg, #7c6cff 0%, #38d9ff 100%);
