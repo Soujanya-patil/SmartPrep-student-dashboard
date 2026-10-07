@@ -1,20 +1,21 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Play, Youtube, AlertCircle, BookOpen, SearchX, RefreshCw, Loader2 } from "lucide-react"
+import { Play, Youtube, AlertCircle, BookOpen, SearchX, RefreshCw, Loader2, History, X, Clock } from "lucide-react"
 import { cn, decodeHtml } from "@/lib/utils"
 import type { VideoRecommendation } from "@/lib/types"
 
-interface VideoSidebarProps {
-  videos: VideoRecommendation[]
+interface VideoSidebarProps<T extends VideoRecommendation> {
+  videos: T[]
   selectedVideo: VideoRecommendation | null
-  onSelectVideo: (video: VideoRecommendation) => void
+  onSelectVideo: (video: T) => void
   isLoading: boolean
   error: string | null
-  variant?: "recommended" | "search"
+  variant?: "recommended" | "search" | "history"
   title?: string
   subtitle?: string
   className?: string
@@ -22,6 +23,12 @@ interface VideoSidebarProps {
   slowMessage?: string
   /** Adds a Retry button to the error state */
   onRetry?: () => void
+  /** Rendered under the header (e.g. Recommended / History tabs) */
+  tabs?: ReactNode
+  /** Extra line on each card, e.g. "5 minutes ago" */
+  getMeta?: (video: T) => string
+  /** Adds a remove button to each card */
+  onRemove?: (video: T) => void
 }
 
 function VideoCardSkeleton() {
@@ -43,7 +50,7 @@ function VideoCardSkeleton() {
   )
 }
 
-export function VideoSidebar({
+export function VideoSidebar<T extends VideoRecommendation>({
   videos,
   selectedVideo,
   onSelectVideo,
@@ -54,9 +61,13 @@ export function VideoSidebar({
   subtitle = "AI-powered suggestions for you",
   className,
   slowMessage,
-  onRetry
-}: VideoSidebarProps) {
+  onRetry,
+  tabs,
+  getMeta,
+  onRemove
+}: VideoSidebarProps<T>) {
   const isSearch = variant === "search"
+  const isHistory = variant === "history"
 
   return (
     <aside
@@ -76,6 +87,7 @@ export function VideoSidebar({
             <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
           </div>
         </div>
+        {tabs && <div className="mt-3">{tabs}</div>}
       </div>
 
       {/* Video List */}
@@ -105,7 +117,15 @@ export function VideoSidebar({
               )}
             </div>
           ) : videos.length === 0 ? (
-            isSearch ? (
+            isHistory ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-4">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <History className="h-6 w-6 text-primary-soft" />
+                </div>
+                <p className="text-sm font-medium text-foreground">No videos watched yet</p>
+                <p className="text-xs text-muted-foreground">Videos you open will appear here, newest first.</p>
+              </div>
+            ) : isSearch ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-4">
                 <div className="p-3 rounded-full bg-primary/10">
                   <SearchX className="h-6 w-6 text-primary-soft" />
@@ -126,43 +146,63 @@ export function VideoSidebar({
           ) : (
             videos.map((video, index) => {
               const isSelected = selectedVideo?.youtubeUrl === video.youtubeUrl
+              const meta = getMeta?.(video)
+              const title = decodeHtml(video.videoTitle)
               return (
-                <button
-                  key={`${video.youtubeUrl}-${index}`}
-                  onClick={() => onSelectVideo(video)}
-                  className={`w-full text-left p-3 rounded-xl border transition-all duration-300 group
-                    ${isSelected
-                      ? 'bg-primary/15 border-primary shadow-card'
-                      : 'card-interactive bg-card/80 border-border hover:bg-secondary/60 hover:-translate-y-1 active:translate-y-0'
-                    }
-                    surface
-                  `}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`shrink-0 p-2 rounded-lg transition-colors ${isSelected ? 'icon-gradient' : 'bg-muted group-hover:bg-primary/25 group-hover:text-primary-soft'}`}>
-                      <Play className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap gap-1.5 mb-2">
-                        <Badge variant="secondary" className="text-xs bg-primary/20 text-primary-soft border-0">
-                          {video.subject}
-                        </Badge>
-                        {video.chapter && (
-                          <Badge variant="outline" className="text-xs border-accent/50 text-accent">
-                            {video.chapter}
+                <div key={`${video.youtubeUrl}-${index}`} className="relative">
+                  <button
+                    onClick={() => onSelectVideo(video)}
+                    className={`w-full text-left p-3 rounded-xl border transition-all duration-300 group ${onRemove ? "pr-10" : ""}
+                      ${isSelected
+                        ? 'bg-primary/15 border-primary shadow-card'
+                        : 'card-interactive bg-card/80 border-border hover:bg-secondary/60 hover:-translate-y-1 active:translate-y-0'
+                      }
+                      surface
+                    `}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`shrink-0 p-2 rounded-lg transition-colors ${isSelected ? 'icon-gradient' : 'bg-muted group-hover:bg-primary/25 group-hover:text-primary-soft'}`}>
+                        <Play className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          <Badge variant="secondary" className="text-xs bg-primary/20 text-primary-soft border-0">
+                            {video.subject}
                           </Badge>
+                          {video.chapter && (
+                            <Badge variant="outline" className="text-xs border-accent/50 text-accent">
+                              {video.chapter}
+                            </Badge>
+                          )}
+                        </div>
+                        <h3 className="font-medium text-sm text-foreground line-clamp-2 mb-1">
+                          {title}
+                        </h3>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Youtube className="h-3 w-3" />
+                          {video.channel}
+                        </p>
+                        {meta && (
+                          <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {meta}
+                          </p>
                         )}
                       </div>
-                      <h3 className="font-medium text-sm text-foreground line-clamp-2 mb-1">
-                        {decodeHtml(video.videoTitle)}
-                      </h3>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Youtube className="h-3 w-3" />
-                        {video.channel}
-                      </p>
                     </div>
-                  </div>
-                </button>
+                  </button>
+                  {onRemove && (
+                    <button
+                      type="button"
+                      onClick={() => onRemove(video)}
+                      aria-label={`Remove "${title}" from history`}
+                      title="Remove from history"
+                      className="absolute right-2 top-2 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               )
             })
           )}

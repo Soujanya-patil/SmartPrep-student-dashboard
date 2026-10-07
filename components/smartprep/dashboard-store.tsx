@@ -15,6 +15,14 @@ import {
 import { ApiError, fetchRecommendations, searchVideos } from "@/lib/api"
 import { useSession } from "@/lib/auth"
 import type { SubjectFilter, VideoRecommendation, VideoSearchParams } from "@/lib/types"
+import {
+  addToHistory,
+  historyStorageKey,
+  readHistory,
+  removeFromHistory,
+  writeHistory,
+  type HistoryEntry,
+} from "@/lib/video-history"
 
 export const CHECK_INTERVAL = 15 * 60 // 15 minutes in seconds
 const MIN_QUERY_LENGTH = 2
@@ -24,6 +32,8 @@ const SLOW_AFTER_MS = 5_000
 const REQUEST_TIMEOUT_MS = 150_000
 
 type LoadStatus = "idle" | "loading" | "ready" | "error"
+
+export type SidebarTab = "recommended" | "history"
 
 /**
  * Dashboard state that must survive navigating to another page and back.
@@ -48,6 +58,11 @@ export interface DashboardData {
   /** Attention-check countdown; it only ticks while the dashboard is on screen */
   timeRemaining: number
   isTimerActive: boolean
+  /** Videos this user opened, newest first. Comes only from localStorage, never from the backend. */
+  history: HistoryEntry[]
+  /** False until this user's history has been read from localStorage */
+  historyLoaded: boolean
+  sidebarTab: SidebarTab
 }
 
 function initialData(ownerId: number | null): DashboardData {
@@ -67,6 +82,9 @@ function initialData(ownerId: number | null): DashboardData {
     isAutoMuted: true,
     timeRemaining: CHECK_INTERVAL,
     isTimerActive: false,
+    history: [],
+    historyLoaded: false,
+    sidebarTab: "recommended",
   }
 }
 
@@ -75,6 +93,10 @@ interface DashboardStore {
   setData: Dispatch<SetStateAction<DashboardData>>
   retryRecommendations: () => void
   search: (query: string, subject: SubjectFilter) => void
+  /** Puts a video the user chose to watch at the top of their history */
+  recordWatched: (video: VideoRecommendation) => void
+  removeFromHistory: (youtubeUrl: string) => void
+  clearHistory: () => void
 }
 
 const DashboardStoreContext = createContext<DashboardStore | null>(null)
@@ -206,12 +228,59 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
       .finally(timeout.clear)
   }, [])
 
+  // ----- video history (localStorage only, per user) -----
+
+  // Read after mount, never during render, so server and client HTML match
+  useEffect(() => {
+    if (data.ownerId === null || data.historyLoaded) return
+    setData((d) => (d.ownerId === null || d.historyLoaded ? d : { ...d, history: readHistory(d.ownerId), historyLoaded: true }))
+  }, [data.ownerId, data.historyLoaded])
+
+  // Save every change. Skipped until loaded, so a user switch can't overwrite the new user's saved history.
+  useEffect(() => {
+    if (data.ownerId === null || !data.historyLoaded) return
+    writeHistory(data.ownerId, data.history)
+  }, [data.ownerId, data.historyLoaded, data.history])
+
+  // Another tab changed this user's history: pick it up
+  useEffect(() => {
+    const ownerId = data.ownerId
+    if (ownerId === null) return
+    const key = historyStorageKey(ownerId)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== key && e.key !== null) return
+      setData((d) => (d.ownerId === ownerId ? { ...d, history: readHistory(ownerId), historyLoaded: true } : d))
+    }
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [data.ownerId])
+
+  const recordWatched = useCallback((video: VideoRecommendation) => {
+    setData((d) => (d.historyLoaded ? { ...d, history: addToHistory(d.history, video) } : d))
+  }, [])
+
+  const removeHistoryEntry = useCallback((youtubeUrl: string) => {
+    setData((d) => ({ ...d, history: removeFromHistory(d.history, youtubeUrl) }))
+  }, [])
+
+  const clearHistory = useCallback(() => {
+    setData((d) => ({ ...d, history: [] }))
+  }, [])
+
   // No abort-on-unmount here: this provider lives as long as the page, and in development StrictMode's
   // simulated unmount would cancel the one-time recommendations request and leave it loading forever.
 
   const value = useMemo<DashboardStore>(
-    () => ({ data, setData, retryRecommendations, search }),
-    [data, retryRecommendations, search]
+    () => ({
+      data,
+      setData,
+      retryRecommendations,
+      search,
+      recordWatched,
+      removeFromHistory: removeHistoryEntry,
+      clearHistory,
+    }),
+    [data, retryRecommendations, search, recordWatched, removeHistoryEntry, clearHistory]
   )
 
   return <DashboardStoreContext.Provider value={value}>{children}</DashboardStoreContext.Provider>

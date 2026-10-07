@@ -1,23 +1,32 @@
 "use client"
 
-import { Play, Youtube } from "lucide-react"
+import { ExternalLink, Play, Youtube } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { decodeHtml } from "@/lib/utils"
 import type { VideoRecommendation } from "@/lib/types"
+import { getYouTubeId, youtubeWatchUrl } from "@/lib/youtube"
 
 interface YouTubePlayerProps {
   video: VideoRecommendation | null
   isPaused: boolean
   muted?: boolean
-  /** Replaces "Select a video to start" while there is no video yet (e.g. still loading) */
+  /** Replaces the "Ready to Learn?" message while there is no video yet (e.g. still loading) */
   emptyText?: string
 }
 
-// Extract the 11-char video ID from watch?v=, youtu.be/, /embed/ or /shorts/ URLs
-export function getYouTubeId(url: string | undefined | null): string | null {
-  if (!url) return null
-  const match = url.match(/(?:[?&]v=|youtu\.be\/|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})/)
-  return match ? match[1] : null
+// Opens the video on youtube.com: the fallback when it won't play in the app
+function WatchOnYouTube({ url, className }: { url: string; className?: string }) {
+  return (
+    <a
+      href={youtubeWatchUrl(url)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`inline-flex items-center gap-1 text-xs font-medium text-primary-soft hover:underline ${className ?? ""}`}
+    >
+      Watch on YouTube
+      <ExternalLink className="h-3 w-3" />
+    </a>
+  )
 }
 
 export function YouTubePlayer({ video, isPaused, muted = false, emptyText }: YouTubePlayerProps) {
@@ -42,7 +51,22 @@ export function YouTubePlayer({ video, isPaused, muted = false, emptyText }: You
             <div className="p-4 rounded-full bg-primary/20 border border-primary/40">
               <Play className="h-8 w-8 text-primary-soft" />
             </div>
-            <p className="text-base sm:text-lg text-foreground" role="status">{emptyText ?? "Select a video to start"}</p>
+            {video ? (
+              // A selected video whose URL has no recognisable YouTube id
+              <>
+                <p className="text-base sm:text-lg text-foreground" role="status">This video can&apos;t be played here.</p>
+                <WatchOnYouTube url={video.youtubeUrl} className="text-sm" />
+              </>
+            ) : emptyText ? (
+              <p className="text-base sm:text-lg text-foreground" role="status">{emptyText}</p>
+            ) : (
+              <>
+                <p className="text-lg sm:text-xl font-semibold text-foreground">Ready to Learn?</p>
+                <p className="max-w-sm text-sm text-muted-foreground">
+                  Pick a video from Recommended or History, or search for a topic.
+                </p>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -67,12 +91,15 @@ export function YouTubePlayer({ video, isPaused, muted = false, emptyText }: You
           <h2 className="font-semibold text-sm sm:text-base text-foreground line-clamp-2">
             {decodeHtml(video.videoTitle)}
           </h2>
-          {video.channel && (
-            <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
-              <Youtube className="h-3 w-3" />
-              {video.channel}
-            </p>
-          )}
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            {video.channel && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Youtube className="h-3 w-3" />
+                {video.channel}
+              </p>
+            )}
+            <WatchOnYouTube url={video.youtubeUrl} />
+          </div>
         </div>
       )}
     </div>

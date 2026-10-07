@@ -9,8 +9,10 @@ import { CountdownTimer } from "./countdown-timer"
 import { AttentionPopup } from "./attention-popup"
 import { QuickLinks } from "./quick-links"
 import { CHECK_INTERVAL, useDashboardField, useDashboardStore, useIsSlow } from "./dashboard-store"
+import { SidebarTabs } from "./sidebar-tabs"
 import { fetchAttentionCheck } from "@/lib/api"
 import type { VideoRecommendation, AttentionCheck } from "@/lib/types"
+import { formatWatchedAt, type HistoryEntry } from "@/lib/video-history"
 
 // Desktop: fixed-width right column that scrolls on its own; height leaves room for header, search bar and the fixed timer
 const SIDEBAR_CLASSES = "lg:w-96 lg:shrink-0 lg:sticky lg:top-4 lg:h-[calc(100dvh-15.5rem)]"
@@ -20,12 +22,23 @@ const WAKING_UP = "Waking up the server, this can take up to 2 minutes…"
 export function Dashboard() {
   // Videos, search, the selected video and the timer live in a store in the root layout, so they
   // survive a visit to another page. Recommendations and search are fetched by the store.
-  const { data, retryRecommendations, search: handleSearch } = useDashboardStore()
+  const { data, retryRecommendations, search: handleSearch, recordWatched, removeFromHistory, clearHistory } =
+    useDashboardStore()
   const { recommended, recommendedStatus, recommendedError, recommendedSince } = data
   const { activeSearch, searchResults, isSearching, searchError, searchSince } = data
   const isLoadingRecommended = recommendedStatus === "idle" || recommendedStatus === "loading"
   const recommendedSlow = useIsSlow(recommendedSince)
   const searchSlow = useIsSlow(searchSince)
+  const { history, historyLoaded } = data
+  const [sidebarTab, setSidebarTab] = useDashboardField("sidebarTab")
+
+  // "5 minutes ago" labels in the History tab; refreshed every minute (0 until mounted, so nothing renders on the server)
+  const [now, setNow] = useState(0)
+  useEffect(() => {
+    setNow(Date.now())
+    const interval = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Player state
   const [selectedVideo, setSelectedVideo] = useDashboardField("selectedVideo")
@@ -45,6 +58,8 @@ export function Dashboard() {
 
   // Handle video selection
   const handleSelectVideo = useCallback((video: VideoRecommendation) => {
+    // History only changes when the user picks a video, never when recommendations or search results arrive
+    recordWatched(video)
     setIsAutoMuted(false)
     setSelectedVideo(video)
     setTimeRemaining(CHECK_INTERVAL)
@@ -53,7 +68,7 @@ export function Dashboard() {
     // Bring the player into view (the list sits below it on mobile/tablet)
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     playerRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" })
-  }, [setIsAutoMuted, setSelectedVideo, setTimeRemaining, setIsTimerActive])
+  }, [recordWatched, setIsAutoMuted, setSelectedVideo, setTimeRemaining, setIsTimerActive])
 
   // Trigger attention check
   const triggerAttentionCheck = useCallback(async () => {
@@ -115,7 +130,16 @@ export function Dashboard() {
     // Timer will resume automatically via useEffect
   }
 
-  // What the sidebar shows: search results while searching, otherwise recommendations
+  const sidebarTabs = (
+    <SidebarTabs
+      active={sidebarTab}
+      onChange={setSidebarTab}
+      historyCount={history.length}
+      onClearHistory={clearHistory}
+    />
+  )
+
+  // What the sidebar shows: search results while searching, otherwise the Recommended or History tab
   const isSearchMode = activeSearch !== null
   const sidebarSubtitle = activeSearch
     ? `"${activeSearch.query}" in ${activeSearch.subject === "All" ? "all subjects" : activeSearch.subject}`
@@ -148,7 +172,9 @@ export function Dashboard() {
                   ? WAKING_UP
                   : "Loading your recommended videos…"
                 : recommendedStatus === "error"
-                  ? "Couldn't load your videos. Use Retry in the list."
+                  ? history.length > 0
+                    ? "Recommendations are unavailable right now. Open the History tab to keep watching."
+                    : "Couldn't load your videos. Use Retry in the list."
                   : undefined
             }
           />
@@ -169,9 +195,25 @@ export function Dashboard() {
             onRetry={activeSearch ? () => handleSearch(activeSearch.query, activeSearch.subject) : undefined}
             className={SIDEBAR_CLASSES}
           />
+        ) : sidebarTab === "history" ? (
+          <VideoSidebar<HistoryEntry>
+            variant="history"
+            title="Watch History"
+            subtitle="Videos you've opened, newest first"
+            tabs={sidebarTabs}
+            videos={history}
+            selectedVideo={selectedVideo}
+            onSelectVideo={handleSelectVideo}
+            isLoading={!historyLoaded}
+            error={null}
+            getMeta={(entry) => (now > 0 ? `Watched ${formatWatchedAt(entry.watchedAt, now)}` : "")}
+            onRemove={(entry) => removeFromHistory(entry.youtubeUrl)}
+            className={SIDEBAR_CLASSES}
+          />
         ) : (
           <VideoSidebar
             variant="recommended"
+            tabs={sidebarTabs}
             videos={recommended}
             selectedVideo={selectedVideo}
             onSelectVideo={handleSelectVideo}
