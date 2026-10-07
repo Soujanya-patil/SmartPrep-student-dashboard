@@ -29,6 +29,8 @@ interface VideoSidebarProps<T extends VideoRecommendation> {
   getMeta?: (video: T) => string
   /** Adds a remove button to each card */
   onRemove?: (video: T) => void
+  /** Thin progress bar with a label, e.g. "Continue from 12:30" or "Watched"; null for none */
+  getProgress?: (video: T) => { fraction: number; label: string } | null
 }
 
 function VideoCardSkeleton() {
@@ -64,7 +66,8 @@ export function VideoSidebar<T extends VideoRecommendation>({
   onRetry,
   tabs,
   getMeta,
-  onRemove
+  onRemove,
+  getProgress
 }: VideoSidebarProps<T>) {
   const isSearch = variant === "search"
   const isHistory = variant === "history"
@@ -147,6 +150,7 @@ export function VideoSidebar<T extends VideoRecommendation>({
             videos.map((video, index) => {
               const isSelected = selectedVideo?.youtubeUrl === video.youtubeUrl
               const meta = getMeta?.(video)
+              const progress = getProgress?.(video) ?? null
               const title = decodeHtml(video.videoTitle)
               return (
                 <div key={`${video.youtubeUrl}-${index}`} className="relative">
@@ -187,6 +191,24 @@ export function VideoSidebar<T extends VideoRecommendation>({
                             <Clock className="h-3 w-3" />
                             {meta}
                           </p>
+                        )}
+                        {progress && (
+                          <div className="mt-2 space-y-1">
+                            <div
+                              role="progressbar"
+                              aria-label="Watched"
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-valuenow={Math.round(progress.fraction * 100)}
+                              className="h-1 w-full overflow-hidden rounded-full bg-muted"
+                            >
+                              <div
+                                className="h-full rounded-full bg-gradient-accent"
+                                style={{ width: `${Math.round(progress.fraction * 100)}%` }}
+                              />
+                            </div>
+                            <p className="text-xs font-medium text-primary-soft">{progress.label}</p>
+                          </div>
                         )}
                       </div>
                     </div>

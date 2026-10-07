@@ -17,11 +17,15 @@ import { useSession } from "@/lib/auth"
 import type { SubjectFilter, VideoRecommendation, VideoSearchParams } from "@/lib/types"
 import {
   addToHistory,
+  clearProgress,
   historyStorageKey,
   readHistory,
   removeFromHistory,
+  saveProgress,
+  unfinishedEntries,
   writeHistory,
   type HistoryEntry,
+  type ProgressUpdate,
 } from "@/lib/video-history"
 
 export const CHECK_INTERVAL = 15 * 60 // 15 minutes in seconds
@@ -97,6 +101,10 @@ interface DashboardStore {
   recordWatched: (video: VideoRecommendation) => void
   removeFromHistory: (youtubeUrl: string) => void
   clearHistory: () => void
+  /** Saves playback progress into the video's history entry (in place, never reordered) */
+  saveVideoProgress: (video: VideoRecommendation, update: ProgressUpdate) => void
+  /** "Start over": forgets one video's saved position */
+  startOver: (youtubeUrl: string) => void
 }
 
 const DashboardStoreContext = createContext<DashboardStore | null>(null)
@@ -137,19 +145,23 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
     fetchRecommendations(id, controller.signal)
       .then((list) => {
         if (recommendAbortRef.current !== controller) return
-        setData((d) =>
-          d.ownerId !== id
-            ? d
-            : {
-                ...d,
-                recommended: list,
-                recommendedStatus: "ready",
-                recommendedSince: null,
-                // Auto-play the first recommendation, unless a video is already selected
-                selectedVideo: list.length > 0 ? (d.selectedVideo ?? list[0]) : d.selectedVideo,
-                isTimerActive: list.length > 0 ? true : d.isTimerActive,
-              }
-        )
+        setData((d) => {
+          if (d.ownerId !== id) return d
+          // Auto-play the first recommendation only when nothing is selected and there's no half-watched
+          // video to offer (then the Continue Watching screen shows instead)
+          const history = d.historyLoaded ? d.history : readHistory(id)
+          const autoPick =
+            list.length > 0 && !d.selectedVideo && unfinishedEntries(history).length === 0 ? list[0] : null
+          const selected = d.selectedVideo ?? autoPick
+          return {
+            ...d,
+            recommended: list,
+            recommendedStatus: "ready",
+            recommendedSince: null,
+            selectedVideo: selected,
+            isTimerActive: list.length > 0 && selected ? true : d.isTimerActive,
+          }
+        })
       })
       .catch((err: unknown) => {
         if (recommendAbortRef.current !== controller) return
@@ -267,6 +279,27 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
     setData((d) => ({ ...d, history: [] }))
   }, [])
 
+  // Latest data for saveVideoProgress, which can run while the page is closing (pagehide)
+  const dataRef = useRef(data)
+  useEffect(() => {
+    dataRef.current = data
+  })
+
+  const saveVideoProgress = useCallback((video: VideoRecommendation, update: ProgressUpdate) => {
+    const current = dataRef.current
+    const ownerId = current.ownerId
+    if (ownerId === null || !current.historyLoaded) return
+    const next = saveProgress(current.history, video, update)
+    if (next === current.history) return
+    // Written right away as well: on pagehide the page may be gone before React's next effect runs
+    writeHistory(ownerId, next)
+    setData((d) => (d.ownerId === ownerId ? { ...d, history: saveProgress(d.history, video, update) } : d))
+  }, [])
+
+  const startOver = useCallback((youtubeUrl: string) => {
+    setData((d) => ({ ...d, history: clearProgress(d.history, youtubeUrl) }))
+  }, [])
+
   // No abort-on-unmount here: this provider lives as long as the page, and in development StrictMode's
   // simulated unmount would cancel the one-time recommendations request and leave it loading forever.
 
@@ -279,8 +312,10 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
       recordWatched,
       removeFromHistory: removeHistoryEntry,
       clearHistory,
+      saveVideoProgress,
+      startOver,
     }),
-    [data, retryRecommendations, search, recordWatched, removeHistoryEntry, clearHistory]
+    [data, retryRecommendations, search, recordWatched, removeHistoryEntry, clearHistory, saveVideoProgress, startOver]
   )
 
   return <DashboardStoreContext.Provider value={value}>{children}</DashboardStoreContext.Provider>

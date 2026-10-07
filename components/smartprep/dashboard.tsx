@@ -12,7 +12,15 @@ import { CHECK_INTERVAL, useDashboardField, useDashboardStore, useIsSlow } from 
 import { SidebarTabs } from "./sidebar-tabs"
 import { fetchAttentionCheck } from "@/lib/api"
 import type { VideoRecommendation, AttentionCheck } from "@/lib/types"
-import { formatWatchedAt, type HistoryEntry } from "@/lib/video-history"
+import { ContinueWatching } from "./continue-watching"
+import {
+  formatClockTime,
+  formatWatchedAt,
+  isUnfinished,
+  resumeSecondsFor,
+  unfinishedEntries,
+  type HistoryEntry,
+} from "@/lib/video-history"
 
 // Desktop: fixed-width right column that scrolls on its own; height leaves room for header, search bar and the fixed timer
 const SIDEBAR_CLASSES = "lg:w-96 lg:shrink-0 lg:sticky lg:top-4 lg:h-[calc(100dvh-15.5rem)]"
@@ -22,8 +30,16 @@ const WAKING_UP = "Waking up the server, this can take up to 2 minutes…"
 export function Dashboard() {
   // Videos, search, the selected video and the timer live in a store in the root layout, so they
   // survive a visit to another page. Recommendations and search are fetched by the store.
-  const { data, retryRecommendations, search: handleSearch, recordWatched, removeFromHistory, clearHistory } =
-    useDashboardStore()
+  const {
+    data,
+    retryRecommendations,
+    search: handleSearch,
+    recordWatched,
+    removeFromHistory,
+    clearHistory,
+    saveVideoProgress,
+    startOver,
+  } = useDashboardStore()
   const { recommended, recommendedStatus, recommendedError, recommendedSince } = data
   const { activeSearch, searchResults, isSearching, searchError, searchSince } = data
   const isLoadingRecommended = recommendedStatus === "idle" || recommendedStatus === "loading"
@@ -130,6 +146,14 @@ export function Dashboard() {
     // Timer will resume automatically via useEffect
   }
 
+  // Half-watched videos, most recent first (local history only)
+  const unfinished = historyLoaded ? unfinishedEntries(history) : []
+
+  const handleStartOver = (entry: HistoryEntry) => {
+    startOver(entry.youtubeUrl)
+    handleSelectVideo(entry)
+  }
+
   const sidebarTabs = (
     <SidebarTabs
       active={sidebarTab}
@@ -162,22 +186,29 @@ export function Dashboard() {
           aria-label="Video player and study timer"
           className="w-full min-w-0 lg:flex-1 lg:sticky lg:top-4 scroll-mt-4"
         >
-          <YouTubePlayer
-            video={selectedVideo}
-            isPaused={showAttentionPopup}
-            muted={isAutoMuted}
-            emptyText={
-              isLoadingRecommended
-                ? recommendedSlow
-                  ? WAKING_UP
-                  : "Loading your recommended videos…"
-                : recommendedStatus === "error"
-                  ? history.length > 0
-                    ? "Recommendations are unavailable right now. Open the History tab to keep watching."
-                    : "Couldn't load your videos. Use Retry in the list."
-                  : undefined
-            }
-          />
+          {!selectedVideo && unfinished.length > 0 ? (
+            // Comes only from local history: works while the backend is asleep or failing
+            <ContinueWatching entries={unfinished.slice(0, 3)} onResume={handleSelectVideo} onStartOver={handleStartOver} />
+          ) : (
+            <YouTubePlayer
+              video={selectedVideo}
+              isPaused={showAttentionPopup}
+              muted={isAutoMuted}
+              startSeconds={selectedVideo ? resumeSecondsFor(history, selectedVideo.youtubeUrl) : 0}
+              onProgress={saveVideoProgress}
+              emptyText={
+                isLoadingRecommended
+                  ? recommendedSlow
+                    ? WAKING_UP
+                    : "Loading your recommended videos…"
+                  : recommendedStatus === "error"
+                    ? history.length > 0
+                      ? "Recommendations are unavailable right now. Open the History tab to keep watching."
+                      : "Couldn't load your videos. Use Retry in the list."
+                    : undefined
+              }
+            />
+          )}
           <QuickLinks className="mt-4" />
         </section>
 
@@ -208,6 +239,16 @@ export function Dashboard() {
             error={null}
             getMeta={(entry) => (now > 0 ? `Watched ${formatWatchedAt(entry.watchedAt, now)}` : "")}
             onRemove={(entry) => removeFromHistory(entry.youtubeUrl)}
+            getProgress={(entry) =>
+              entry.finished
+                ? { fraction: 1, label: "Watched" }
+                : isUnfinished(entry)
+                  ? {
+                      fraction: Math.min(1, (entry.progressSeconds ?? 0) / (entry.durationSeconds ?? 1)),
+                      label: `Continue from ${formatClockTime(entry.progressSeconds ?? 0)}`,
+                    }
+                  : null
+            }
             className={SIDEBAR_CLASSES}
           />
         ) : (
